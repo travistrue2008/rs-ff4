@@ -95,6 +95,48 @@ pub struct Enemy {
 	treasure: Vec<EnemyDrop>,
 }
 
+impl Enemy {
+	pub fn id(&self) -> i32 {
+		self.id
+	}
+
+	pub fn hp(&self) -> i32 {
+		self.hp
+	}
+
+	pub fn strength(&self) -> i32 {
+		self.strength
+	}
+
+	pub fn defense(&self) -> i32 {
+		self.defense
+	}
+
+	pub fn magic(&self) -> i32 {
+		self.magic
+	}
+
+	pub fn magic_defense(&self) -> i32 {
+		self.magic_defense
+	}
+
+	pub fn gil(&self) -> i32 {
+		self.gil
+	}
+
+	pub fn exp(&self) -> i32 {
+		self.exp
+	}
+
+	pub fn name(&self) -> &str {
+		&self.name
+	}
+
+	pub fn treasure(&self) -> &Vec<EnemyDrop> {
+		&self.treasure
+	}
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Command {
 	name: String,
