@@ -1,0 +1,696 @@
+[
+  {
+    "id": 1,
+    "name": "Iron Shield",
+    "type": "Shield",
+    "price": 100,
+    "defense": 1,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 2,
+    "name": "Black Shield",
+    "type": "Shield",
+    "price": 200,
+    "defense": 1,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 3,
+    "name": "Demon Shield",
+    "type": "Shield",
+    "price": 700,
+    "defense": 2,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 4,
+    "name": "Light Shield",
+    "type": "Shield",
+    "price": 700,
+    "defense": 2,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 5,
+    "name": "Mithril Shield",
+    "type": "Shield",
+    "price": 1000,
+    "defense": 3,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 6,
+    "name": "Flame Shield",
+    "type": "Shield",
+    "price": 1250,
+    "defense": 3,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 7,
+    "name": "Ice Shield",
+    "type": "Shield",
+    "price": 10000,
+    "defense": 3,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 8,
+    "name": "Diamond Shield",
+    "type": "Shield",
+    "price": 15000,
+    "defense": 4,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 9,
+    "name": "Aegis Shield",
+    "type": "Shield",
+    "price": 20000,
+    "defense": 4,
+    "magicDefense": 5,
+    "modifiers": []
+  },
+  {
+    "id": 10,
+    "name": "Genji Shield",
+    "type": "Shield",
+    "price": 10,
+    "defense": 5,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 11,
+    "name": "Dragon Shield",
+    "type": "Shield",
+    "price": 10,
+    "defense": 6,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 12,
+    "name": "Crystal Shield",
+    "type": "Shield",
+    "price": 10,
+    "defense": 7,
+    "magicDefense": 4,
+    "modifiers": []
+  },
+  {
+    "id": 13,
+    "name": "Leather Helm",
+    "type": "Helm",
+    "price": 100,
+    "defense": 1,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 14,
+    "name": "Bandana",
+    "type": "Helm",
+    "price": 450,
+    "defense": 1,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 15,
+    "name": "Feather Helm",
+    "type": "Helm",
+    "price": 330,
+    "defense": 2,
+    "magicDefense": 3,
+    "modifiers": []
+    },
+  {
+    "id": 16,
+    "name": "Triangle Helm",
+    "type": "Helm",
+    "price": 700,
+    "defense": 3,
+    "magicDefense": 5,
+    "modifiers": []
+  },
+  {
+    "id": 17,
+    "name": "Iron Helm",
+    "type": "Helm",
+    "price": 150,
+    "defense": 3,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 18,
+    "name": "Black Helm",
+    "type": "Helm",
+    "price": 360,
+    "defense": 4,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 19,
+    "name": "Hades Helm",
+    "type": "Helm",
+    "price": 360,
+    "defense": 5,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 20,
+    "name": "Priest Hat",
+    "type": "Helm",
+    "price": 2000,
+    "defense": 5,
+    "magicDefense": 7,
+    "modifiers": [] 
+  },
+  {
+    "id": 21,
+    "name": "Demon Helm",
+    "type": "Helm",
+    "price": 980,
+    "defense": 6,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 22,
+    "name": "Green Beret",
+    "type": "Helm",
+    "price": 1000,
+    "defense": 6,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 23,
+    "name": "Light Helm",
+    "type": "Helm",
+    "price": 4000,
+    "defense": 7,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 24,
+    "name": "GoldBand Helm",
+    "type": "Helm",
+    "price": 20000,
+    "defense": 7,
+    "magicDefense": 10,
+    "modifiers": []
+  },
+  {
+    "id": 25,
+    "name": "DarkHood",
+    "type": "Helm",
+    "price": 2000,
+    "defense": 7,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 26,
+    "name": "Mithril",
+    "type": "Helm",
+    "price": 3000,
+    "defense": 8,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 27,
+    "name": "Diamond Helm",
+    "type": "Helm",
+    "price": 10000,
+    "defense": 9,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 28,
+    "name": "Ribbon",
+    "type": "Helm",
+    "price": 10,
+    "defense": 9,
+    "magicDefense": 12,
+    "modifiers": []
+  },
+  {
+    "id": 29,
+    "name": "Genji Helm",
+    "type": "Helm",
+    "price": 10,
+    "defense": 10,
+    "magicDefense": 6,
+    "modifiers": []
+  },
+  {
+    "id": 30,
+    "name": "Dragon Helm",
+    "type": "Helm",
+    "price": 10,
+    "defense": 11,
+    "magicDefense": 7,
+    "modifiers": []
+  },
+  {
+    "id": 31, 
+    "name": "Crystal Helm",
+    "type": "Helm",
+    "price": 10,
+    "defense": 12,
+    "magicDefense": 8,
+    "modifiers": []
+  },
+  {
+    "id": 32,
+    "name": "Glass Helm",
+    "type": "Helm",
+    "price": 30000,
+    "defense": 30,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 33,
+    "name": "Black Armor",
+    "type": "Armor",
+    "price": 1100,
+    "defense": 5,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 34,
+    "name": "Demon Armor",
+    "type": "Armor",
+    "price": 3000,
+    "defense": 9,
+    "magicDefense": 3,
+    "modifiers": []
+  },
+  {
+    "id": 35,
+    "name": "Hades Armor",
+    "type": "Armor",
+    "price": 2000,
+    "defense": 7,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 36,
+    "name": "Knight Armor",
+    "type": "Armor",
+    "price": 8000,
+    "defense": 11,
+    "magicDefense": 3,
+    "modifiers": []
+  },
+  {
+    "id": 37,
+    "name": "Mithril Armor",
+    "type": "Armor",
+    "price": 17000,
+    "defense": 13,
+    "magicDefense": 4,
+    "modifiers": []
+  },
+  {
+    "id": 38,
+    "name": "Flame Armor",
+    "type": "Armor",
+    "price": 30000,
+    "defense": 15,
+    "magicDefense": 4,
+    "modifiers": []
+  },
+  {
+    "id": 39,
+    "name": "Ice Armor",
+    "type": "Armor",
+    "price": 35000,
+    "defense": 17,
+    "magicDefense": 4,
+    "modifiers": []
+  },
+  {
+    "id": 40,
+    "name": "Diamond Armor",
+    "type": "Armor",
+    "price": 40000,
+    "defense": 19,
+    "magicDefense": 4,
+    "modifiers": []
+  },
+  {
+    "id": 41,
+    "name": "Genji Armor",
+    "type": "Armor",
+    "price": 10,
+    "defense": 21,
+    "magicDefense": 4,
+    "modifiers": []
+  },
+  {
+    "id": 42,
+    "name": "Dragon Armor",
+    "type": "Armor",
+    "price": 10,
+    "defense": 23,
+    "magicDefense": 8,
+    "modifiers": []
+  },
+  {
+    "id": 43,
+    "name": "Crystal Armor",
+    "type": "Armor",
+    "price": 10,
+    "defense": 25,
+    "magicDefense": 10,
+    "modifiers": []
+  },
+  {
+    "id": 44,
+    "name": "Adamant Armor",
+    "type": "Armor",
+    "price": 10,
+    "defense": 107,
+    "magicDefense": 20,
+    "modifiers": []
+  },
+
+  {
+    "id": 45,
+    "name": "Cloth Robe",
+    "type": "Robe",
+    "price": 50,
+    "defense": 1,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 46,
+    "name": "Convict Robe",
+    "type": "Robe",
+    "price": 70,
+    "defense": 1,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 47,
+    "name": "Poet Robe",
+    "type": "Robe",
+    "price": 70,
+    "defense": 2,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 48,
+    "name": "Leather Robe",
+    "type": "Robe",
+    "price": 200,
+    "defense": 2,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 49,
+    "name": "Gaea Robe",
+    "type": "Robe",
+    "price": 500,
+    "defense": 3,
+    "magicDefense": 3,
+    "modifiers": []
+  },
+  {
+    "id": 50,
+    "name": "Kenpou Robe",
+    "type": "Robe",
+    "price": 4000,
+    "defense": 5,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 51,
+    "name": "Priest Robe",
+    "type": "Robe",
+    "price": 1200,
+    "defense": 5,
+    "magicDefense": 5,
+    "modifiers": []
+  },
+  {
+    "id": 52,
+    "name": "Black Robe",
+    "type": "Robe",
+    "price": 10000,
+    "defense": 8,
+    "magicDefense": 7,
+    "modifiers": []
+  },
+  {
+    "id": 53,
+    "name": "Light Robe",
+    "type": "Robe",
+    "price": 30000,
+    "defense": 12,
+    "magicDefense": 9,
+    "modifiers": []
+  },
+  {
+    "id": 54,
+    "name": "Black Belt Robe",
+    "type": "Robe",
+    "price": 14000,
+    "defense": 12,
+    "magicDefense": 3,
+    "modifiers": []
+  },
+  {
+    "id": 55,
+    "name": "Power Robe",
+    "type": "Robe",
+    "price": 4000,
+    "defense": 5,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 56,
+    "name": "White Robe",
+    "type": "Robe",
+    "price": 10,
+    "defense": 18,
+    "magicDefense": 10,
+    "modifiers": []
+  },
+  {
+    "id": 57,
+    "name": "Menerva Robe",
+    "type": "Robe",
+    "price": 40000,
+    "defense": 18,
+    "magicDefense": 10,
+    "modifiers": []
+  },
+  {
+    "id": 58,
+    "name": "Dark Gear",
+    "type": "Robe",
+    "price": 64000,
+    "defense": 24,
+    "magicDefense": 10,
+    "modifiers": []
+  },
+  {
+    "id": 59,
+    "name": "Ruby Ring",
+    "type": "Ring",
+    "price": 1000,
+    "defense": 0,
+    "magicDefense": 3,
+    "modifiers": []
+  },
+  {
+    "id": 60,
+    "name": "Iron Ring",
+    "type": "Ring",
+    "price": 100,
+    "defense": 2,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 61,
+    "name": "Power Ring",
+    "type": "Ring",
+    "price": 760,
+    "defense": 2,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 62,
+    "name": "Silver Ring",
+    "type": "Ring",
+    "price": 650,
+    "defense": 4,
+    "magicDefense": 4,
+    "modifiers": []
+  },
+  {
+    "id": 63,
+    "name": "Rune Ring",
+    "type": "Ring",
+    "price": 2000,
+    "defense": 5,
+    "magicDefense": 8,
+    "modifiers": []
+  },
+  {
+    "id": 64,
+    "name": "Diamond Ring",
+    "type": "Ring",
+    "price": 4000,
+    "defense": 6,
+    "magicDefense": 8,
+    "modifiers": []
+  },
+  {
+    "id": 65, 
+    "name": "Defense Ring",
+    "type": "Ring",
+    "price": 6000,
+    "defense": 10,
+    "magicDefense": 12,
+    "modifiers": []
+  },
+  {
+    "id": 66,
+    "name": "Crystal Ring",
+    "type": "Ring",
+    "price": 6000,
+    "defense": 20,
+    "magicDefense": 12,
+    "modifiers": []
+  },
+  {
+    "id": 67,
+    "name": "Iron Gauntlet",
+    "type": "Gauntlets",
+    "price": 130,
+    "defense": 2,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 68,
+    "name": "Black Gauntlet",
+    "type": "Gauntlets",
+    "price": 260,
+    "defense": 2,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 69,
+    "name": "Hades Gauntlet",
+    "type": "Gauntlets",
+    "price": 520,
+    "defense": 3,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 70,
+    "name": "Demon Gauntlet",
+    "type": "Gauntlets",
+    "price": 800,
+    "defense": 4,
+    "magicDefense": 0,
+    "modifiers": []
+  },
+  {
+    "id": 71,
+    "name": "Gauntlet",
+    "type": "Gauntlets",
+    "price": 3000,
+    "defense": 5,
+    "magicDefense": 1,
+    "modifiers": []
+  },
+  {
+    "id": 72,
+    "name": "Mithril Gauntlet",
+    "type": "Gauntlets",
+    "price": 2000,
+    "defense": 6,
+    "magicDefense": 2,
+    "modifiers": []
+  },
+  {
+    "id": 73,
+    "name": "Diamond Gauntlet",
+    "type": "Gauntlets",
+    "price": 5000,
+    "defense": 7,
+    "magicDefense": 3,
+    "modifiers": []
+  },
+  {
+    "id": 74,
+    "name": "Genji Gauntlet",
+    "type": "Gauntlets",
+    "price": 10,
+    "defense": 8,
+    "magicDefense": 5,
+    "modifiers": []
+  },
+  {
+    "id": 75,
+    "name": "Dragon Gauntlet",
+    "type": "Gauntlets",
+    "price": 10,
+    "defense": 9,
+    "magicDefense": 6,
+    "modifiers": []
+  },
+  {
+    "id": 76,
+    "name": "Crystal Gauntlet",
+    "type": "Gauntlets",
+    "price": 10,
+    "defense": 10,
+    "magicDefense": 7,
+    "modifiers": []
+  },
+  {
+    "id": 77,
+    "name": "Giant Gauntlet",
+    "type": "Gauntlets",
+    "price": 10,
+    "defense": 15,
+    "magicDefense": 0,
+    "modifiers": []
+  }
+]

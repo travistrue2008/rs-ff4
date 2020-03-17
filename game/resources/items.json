@@ -1,0 +1,356 @@
+[
+  {
+    "id": 1,
+    "name": "Potion",
+    "description": "Restores some HP.",
+    "price": 30
+  },
+  {
+    "id": 2,
+    "name": "Hi-Potion",
+    "description": "Stronger version of Potion.",
+    "price": 150
+  },
+  {
+    "id": 3,
+    "name": "X-Potion",
+    "description": "Stronger version of HiPotion.",
+    "price": 0
+  },
+  {
+    "id": 4,
+    "name": "Ether",
+    "description": "Restores some MP.",
+    "price": 10000
+  },
+  {
+    "id": 5,
+    "name": "Hi-Ether",
+    "description": "Stronger version of Ether.",
+    "price": 50000
+  },
+  {
+    "id": 6,
+    "name": "Elixir",
+    "description": "Completely restores HP and MP.",
+    "price": 100000
+  },
+  {
+    "id": 7,
+    "name": "Tent",
+    "description": "Restores some HP and MP. Cures all bad status effects except KO.",
+    "price": 100
+  },
+  {
+    "id": 8,
+    "name": "Cottage",
+    "description": "Completely restores some HP and MP. Cures all bad status effects.",
+    "price": 500
+  },
+  {
+    "id": 9,
+    "name": "Pheonix Down",
+    "description": "Cures KO and restores minimal HP and MP. Cures all bad status effects.",
+    "price": 100
+  },
+  {
+    "id": 10,
+    "name": "Maiden's Kiss",
+    "description": "Cures Toad.",
+    "price": 60
+  },
+  {
+    "id": 11,
+    "name": "Golden Pin",
+    "description": "Cures Stone.",
+    "price": 400
+  },
+  {
+    "id": 12,
+    "name": "Mallet",
+    "description": "Cures Mini.",
+    "price": 80
+  },
+  {
+    "id": 13,
+    "name": "Salad",
+    "description": "Cures Piggy.",
+    "price": 100
+  },
+  {
+    "id": 14,
+    "name": "Echo Screen",
+    "description": "Cures Silence.",
+    "price": 50
+  },
+  {
+    "id": 15,
+    "name": "Eyedrops",
+    "description": "Cures Blind.",
+    "price": 30
+  },
+  {
+    "id": 16,
+    "name": "Antidote",
+    "des,cription": "Cures Poison.",
+    "price": 40
+  },
+  {
+    "id": 17,
+    "name": "Cross",
+    "description": "Cures Curse.",
+    "price": 100
+  },
+  {
+    "id": 18,
+    "name": "Remedy",
+    "description": "Cures all bad status effects except KO.",
+    "price": 5000
+  },
+  {
+    "id": 19,
+    "name": "Alarm Clock",
+    "description": "Cures Sleep for all targets.",
+    "price": 10
+  },
+  {
+    "id": 20,
+    "name": "Unicorn",
+    "description": "Immediately cures bad status effects that would immediately dissappear after battle.",
+    "price": 10
+  },
+  {
+    "id": 21,
+    "name": "Fragment",
+    "description": "Causes light fire damage.",
+    "price": 1000
+  },
+  {
+    "id": 22,
+    "name": "Right Arm",
+    "description": "Causes fire damage.",
+    "price": 0
+  },
+  {
+    "id": 23,
+    "name": "South Pole",
+    "description": "Causes light ice damage.",
+    "price": 100
+  },
+  {
+    "id": 24,
+    "name": "North Pole",
+    "description": "Causes ice damage.",
+    "price": 500
+  },
+  {
+    "id": 25,
+    "name": "Zeus's Rage",
+    "description": "Causes some lightning damage.",
+    "price": 100
+  },
+  {
+    "id": 26,
+    "name": "Rage of God",
+    "description": "Causes lightning damage.",
+    "price": 900
+  },
+  {
+    "id": 27,
+    "name": "Stardust",
+    "description": "Casts Comet.",
+    "price": 1000
+  },
+  {
+    "id": 28,
+    "name": "Red Fang",
+    "description": "Casts an extremely powerful fire attack.",
+    "price": 100
+  },
+  {
+    "id": 29,
+    "name": "White Fang",
+    "description": "Casts an extremely powerful ice attack.",
+    "price": 100
+  },
+  {
+    "id": 30,
+    "name": "Blue Fang",
+    "description": "Casts an extremely powerful thunder attack.",
+    "price": 100
+  },
+  {
+    "id": 31,
+    "name": "Earth Drum",
+    "description": "Casts Quake.",
+    "price": 500
+  },
+  {
+    "id": 32,
+    "name": "Book of Knowledge",
+    "description": "Summons a random spirit.",
+    "price": 10
+  },
+  {
+    "id": 33,
+    "name": "Whisker",
+    "description": "Casts Death, and never misses.",
+    "price": 1000
+  },
+  {
+    "id": 34,
+    "name": "Copper Timer",
+    "description": "Lightly casts Stop on all targets.",
+    "price": 100
+  },
+  {
+    "id": 35,
+    "name": "Silver Timer",
+    "description": "Casts Stop on all targets.",
+    "price": 500
+  },
+  {
+    "id": 36,
+    "name": "Gold Timer",
+    "description": "Heavily casts Stop on all targets.",
+    "price": 0
+  },
+  {
+    "id": 37,
+    "name": "Spider Web",
+    "description": "Casts Slow on a single target.",
+    "price": 100
+  },
+  {
+    "id": 38,
+    "name": "Silence Bell",
+    "description": "Casts Silence on a single target.",
+    "price": 100
+  },
+  {
+    "id": 39,
+    "name": "Monsters",
+    "description": "Casts Scan on all targets.",
+    "price": 980
+  },
+  {
+    "id": 40,
+    "name": "Hermes",
+    "description": "Casts Haste on a single target.",
+    "price": 200
+  },
+  {
+    "id": 41,
+    "name": "Beserk",
+    "description": "Casts Berserk on a single target.",
+    "price": 200
+  },
+  {
+    "id": 42,
+    "name": "Spirit",
+    "description": "Transfers HP from the caster to the target.",
+    "price": 10
+  },
+  {
+    "id": 43,
+    "name": "Vampire Fang",
+    "description": "Casts Drain on a single target.",
+    "price": 50
+  },
+  {
+    "id": 44,
+    "name": "Lilith's Kiss",
+    "description": "Casts Osmose on a single target.",
+    "price": 200
+  },
+  {
+    "id": 45,
+    "name": "Book of the Bomb",
+    "description": "Teaches Rydia how to summon a Bomb.",
+    "price": 200
+  },
+  {
+    "id": 46,
+    "name": "Book of the Goblin",
+    "description": "Teaches Rydia how to summon a Goblin.",
+    "price": 100
+  },
+  {
+    "id": 47,
+    "name": "Book of the Chocobo",
+    "description": "Teaches Rydia how to summon a Chocobo.",
+    "price": 300
+  },
+  {
+    "id": 48,
+    "name": "Book of the Mind",
+    "description": "Teaches Rydia how to summon a Mage.",
+    "price": 400
+  },
+  {
+    "id": 49,
+    "name": "Scape",
+    "description": "Casts Blink on a single target.",
+    "price": 50
+  },
+  {
+    "id": 50,
+    "name": "Light Curtain",
+    "description": "Casts Wall on a single target.",
+    "price": 1000
+  },
+  {
+    "id": 51,
+    "name": "Moon Curtain",
+    "description": "Casts Reflect on a single target.",
+    "price": 2000
+  },
+  {
+    "id": 52,
+    "name": "Exit",
+    "description": "Warps you out of dungeons to the surface.",
+    "price": 180
+  },
+  {
+    "id": 53,
+    "name": "Dwarven Bread",
+    "description": "Casts Sight.",
+    "price": 100
+  },
+  {
+    "id": 54,
+    "name": "Veggie",
+    "description": "Calls Fat Chocobo.",
+    "price": 50
+  },
+  {
+    "id": 55,
+    "name": "Whistle",
+    "description": "Allows you to call Fat Chocobo from anywhere except during battle.",
+    "price": 20000
+  },
+  {
+    "id": 56,
+    "name": "Silver Apple",
+    "description": "Raises maximum HP by 50 points.",
+    "price": 100
+  },
+  {
+    "id": 57,
+    "name": "Gold Apple",
+    "description": "Raises maximum HP by 100 points.",
+    "price": 1000
+  },
+  {
+    "id": 58,
+    "name": "Soma",
+    "description": "Raises maximum MP by 10 points.",
+    "price": 10
+  },
+  {
+    "id": 59,
+    "name": "Alert",
+    "description": "Alerts enemies to your presence and pulls you straight into battle.",
+    "price": 100
+  }
+]
