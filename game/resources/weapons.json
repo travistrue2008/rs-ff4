@@ -200,6 +200,7 @@
   {
     "id": 23,
     "name": "Artemis Bow",
+    "type": "Bow",
     "price": 19000,
     "attack": 27,
     "hitRate": 20,
