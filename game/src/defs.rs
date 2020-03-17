@@ -51,8 +51,11 @@ pub struct Armor {
 	id: i32,
 	price: i32,
 	defense: i32,
+	evasion: i32,
 	#[serde(alias = "magicDefense")]
 	magic_defense: i32,
+	#[serde(alias = "magicEvasion")]
+	magic_evastion: i32,
 	name: String,
 	#[serde(alias = "type")]
 	kind: ArmorKind,
