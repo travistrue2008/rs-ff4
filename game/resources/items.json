@@ -352,5 +352,110 @@
     "name": "Alert",
     "description": "Alerts enemies to your presence and pulls you straight into battle.",
     "price": 100
+  },
+
+
+
+  {
+    "id": 60,
+    "name": "Adamantite",
+    "description": "The strongest metal there is.",
+    "price": 0
+  },
+  {
+    "id": 61,
+    "name": "Baron Key",
+    "description": "Unlocks doors in Baron.",
+    "price": 0
+  },
+  {
+    "id": 62,
+    "name": "Bomb Ring",
+    "description": "Package for the village of Mist.",
+    "price": 0
+  },
+  {
+    "id": 63,
+    "name": "Crystal",
+    "description": "Reveals the true form of evil.",
+    "price": 0
+  },
+  {
+    "id": 64,
+    "name": "Dark Crystal",
+    "description": "The Crystal of Darkness",
+    "price": 0
+  },
+  {
+    "id": 65,
+    "name": "Dark Matter",
+    "description": "Offers protection from Big Bang",
+    "price": 0
+  },
+  {
+    "id": 66,
+    "name": "Earth Crystal",
+    "description": "Toroia's Crystal, stolen by the Dark Elf.",
+    "price": 0
+  },
+  {
+    "id": 67,
+    "name": "Magma Rock",
+    "description": "Key to the Underworld.",
+    "price": 0
+  },
+  {
+    "id": 68,
+    "name": "Luca's Necklace",
+    "description": "Key to the Sealed Cave.",
+    "price": 0
+  },
+  {
+    "id": 69,
+    "name": "Frying Pan",
+    "description": "A frying pan that can wake Yang up.",
+    "price": 0
+  },
+  {
+    "id": 70,
+    "name": "Pass",
+    "description": "Pass to the Toroia pub",
+    "price": 0
+  },
+  {
+    "id": 71,
+    "name": "Pink Tail",
+    "description": "Hmm... this must be useful for something.",
+    "price": 0
+  },
+  {
+    "id": 72,
+    "name": "Rat Tail",
+    "description": "A rare tail.",
+    "price": 0
+  },
+  {
+    "id": 73,
+    "name": "Sand Ruby",
+    "description": "Cures desert fever.",
+    "price": 0
+  },
+  {
+    "id": 74,
+    "name": "Adult Magazine",
+    "description": "Guess.",
+    "price": 0
+  },
+  {
+    "id": 75,
+    "name": "Lugeie Key",
+    "description": "Opens doors in the Tower of Babil.",
+    "price": 0
+  },
+  {
+    "id": 76,
+    "name": "Lute",
+    "description": "A Harp that can echo its twin's music.",
+    "price": 0
   }
 ]
