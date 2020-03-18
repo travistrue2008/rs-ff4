@@ -5,5 +5,9 @@ authors = ["travistrue2008 <travis.true08@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+cgmath = "0.16.1"
+gl = "0.10.0"
+glfw = "0.37.0"
+image = "0.23.2"
 serde = { version = "1.0.100", features = ["derive"] }
 serde_json = "1.0"

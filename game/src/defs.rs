@@ -188,11 +188,11 @@ impl Definitions {
 }
 
 pub fn load() -> Definitions {
-	let item_contents = fs::read_to_string("./resources/items.json").unwrap();
-	let armor_contents = fs::read_to_string("./resources/armor.json").unwrap();
-	let weapon_contents = fs::read_to_string("./resources/weapons.json").unwrap();
-	let enemy_contents = fs::read_to_string("./resources/enemies.json").unwrap();
-	let member_contents = fs::read_to_string("./resources/party.json").unwrap();
+	let item_contents = fs::read_to_string("./assets/items.json").unwrap();
+	let armor_contents = fs::read_to_string("./assets/armor.json").unwrap();
+	let weapon_contents = fs::read_to_string("./assets/weapons.json").unwrap();
+	let enemy_contents = fs::read_to_string("./assets/enemies.json").unwrap();
+	let member_contents = fs::read_to_string("./assets/party.json").unwrap();
 
 	Definitions {
 		items: serde_json::from_str(&item_contents).unwrap(),

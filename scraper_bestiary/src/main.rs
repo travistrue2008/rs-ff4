@@ -104,7 +104,7 @@ fn process_lines(lines: &Vec<String>) -> Vec<Enemy> {
 
 fn write_file(items: &Vec<Enemy>) {
 	let result = serde_json::to_string_pretty(&items).unwrap();
-	let path = Path::new("./resources/enemies.json");
+	let path = Path::new("./assets/enemies.json");
 	let mut file = fs::File::create(&path).unwrap();
 
 	file.write_all(result.as_bytes()).unwrap();
