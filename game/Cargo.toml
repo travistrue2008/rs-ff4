@@ -9,5 +9,6 @@ cgmath = "0.16.1"
 gl = "0.10.0"
 glfw = "0.37.0"
 image = "0.23.2"
+rodio = "0.11.0"
 serde = { version = "1.0.100", features = ["derive"] }
 serde_json = "1.0"
