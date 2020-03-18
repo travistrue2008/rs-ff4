@@ -65,14 +65,14 @@ pub struct Armor {
 #[derive(Debug, Deserialize)]
 pub struct Weapon {
 	id: i32,
-  price: i32,
+	price: i32,
 	attack: i32,
 	#[serde(alias = "hitRate")]
 	hit_rate: i32,
 	name: String,
 	#[serde(alias = "type")]
-  kind: WeaponKind,
-  modifiers: Vec<i32>,
+	kind: WeaponKind,
+	modifiers: Vec<i32>,
 }
 
 #[derive(Debug, Deserialize)]
