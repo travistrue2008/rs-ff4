@@ -88,10 +88,6 @@ impl Shader {
 	pub fn bind(&self) {
 		unsafe { gl::UseProgram(self.handle) };
 	}
-
-	pub fn handle(&self) -> GLuint {
-		self.handle
-	}
 }
 
 impl Drop for Shader {

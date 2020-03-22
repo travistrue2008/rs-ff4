@@ -12,9 +12,8 @@ pub struct Texture {
 }
 
 impl Texture {
-	pub fn make(image: &tm2::Image, mipmaps: bool) -> Texture {
+	pub fn make(image: &tm2::RawImage, mipmaps: bool) -> Texture {
 		let mut handle = 0 as GLuint;
-		let data = image.to_raw();
 	
 		unsafe {
 			gl::GenTextures(1, &mut handle);
@@ -33,7 +32,7 @@ impl Texture {
 				0,
 				gl::RGBA,
 				gl::UNSIGNED_BYTE,
-				&data[0] as *const u8 as *const c_void,
+				&image.pixels()[0] as *const u8 as *const c_void,
 			);
 
 			if mipmaps {

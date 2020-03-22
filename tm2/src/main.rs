@@ -5,14 +5,13 @@ extern crate image;
 mod tm2;
 mod shader;
 mod texture;
+mod vbo;
 
-use gl::types::*;
-use std::mem;
-use std::os::raw::c_void;
-use std::ptr;
-use std::sync::mpsc::Receiver;
 use shader::Shader;
+use std::sync::mpsc::Receiver;
+use std::vec;
 use texture::Texture;
+use vbo::{AttributeKind, VBO};
 
 use glfw::{
 	Action,
@@ -24,6 +23,8 @@ use glfw::{
 	WindowHint,
 	WindowMode,
 };
+
+const COLOR_KEY: [u8;3] = [0, 255, 0];
 
 const SRC_VERTEX: &str = r#"
 	#version 330 core
@@ -49,53 +50,41 @@ const SRC_FRAGMENT: &str = r#"
   out vec4 out_color;
 
   void main() {
-	//   out_color = vec4(v_coord.x, 0.0, v_coord.y, 1.0);
-
 	out_color = texture(u_tex, v_coord);
   }
 "#;
 
-fn make_vao() -> GLuint {
-	const VERTICES: [f32;16] = [
-		 1.0,  1.0, 1.0, 0.0,
-		-1.0,  1.0, 0.0, 0.0,
-		-1.0, -1.0, 0.0, 1.0,
-		 1.0, -1.0, 1.0, 1.0,
-	];
+#[repr(C, packed)]
+#[derive(Copy, Clone, Debug)]
+struct Vertex {
+	x: f32,
+	y: f32,
+	u: f32,
+	v: f32,
+}
 
-	let (mut vbo, mut vao) = (0, 0);
-	let stride = 4 * mem::size_of::<GLfloat>() as GLsizei;
-	let vert_ptr = &VERTICES[0] as *const f32 as *const c_void;
-	let buffer_size = (VERTICES.len() * mem::size_of::<GLfloat>()) as GLsizeiptr;
+impl Vertex {
+	pub fn attrs() -> Vec<(bool, usize, AttributeKind)> {
+		vec![
+			(false, 2, AttributeKind::Float),
+			(false, 2, AttributeKind::Float),
+		]
+	}
 
-	unsafe {
-		gl::GenVertexArrays(1, &mut vao);
-		gl::GenBuffers(1, &mut vbo);
-		gl::BindVertexArray(vao);
+	pub fn new() -> Vertex {
+		Vertex { x: 0.0, y: 0.0, u: 0.0, v: 0.0 }
+	}
 
-		gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-		gl::BufferData(gl::ARRAY_BUFFER, buffer_size, vert_ptr, gl::STATIC_DRAW);
-
-		gl::EnableVertexAttribArray(0);
-		gl::EnableVertexAttribArray(1);
-
-		gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, stride, ptr::null());
-		gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, stride, (2 * mem::size_of::<GLfloat>()) as *const c_void);
-
-		gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-		gl::BindVertexArray(0);
-
-		vao as GLuint
+	pub fn make(x: f32, y: f32, u: f32, v: f32) -> Vertex {
+		Vertex { x, y, u, v }
 	}
 }
 
-fn draw(shader: &Shader, texture: &Texture, vao: GLuint) {
+fn draw(shader: &Shader, texture: &Texture, vbo: &VBO) {
 	unsafe {
 		shader.bind();
 		texture.bind(0);
-
-		gl::BindVertexArray(vao);
-		gl::DrawArrays(gl::TRIANGLE_FAN, 0, 4);
+		vbo.draw();
 	}
 }
 
@@ -127,8 +116,10 @@ fn init_gl(window: &mut Window) {
 	gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
 	unsafe {
+		gl::Enable(gl::BLEND);
 		gl::ClearColor(0.2, 0.3, 0.3, 1.0);
 		gl::ActiveTexture(gl::TEXTURE0);
+		gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
 	}
 }
 
@@ -161,23 +152,25 @@ fn main() {
 	init_gl(&mut window);
 
 	let shader = Shader::make(SRC_VERTEX, SRC_FRAGMENT).unwrap();
-	let vao = make_vao();
+	let vbo = VBO::make(&vec![
+		Vertex::make( 1.0,  1.0, 1.0, 0.0),
+		Vertex::make(-1.0,  1.0, 0.0, 0.0),
+		Vertex::make(-1.0, -1.0, 0.0, 1.0),
+		Vertex::make( 1.0, -1.0, 1.0, 1.0),
+	], &Vertex::attrs());
 
 	let data = tm2::load("./assets/cave1_c_base.tm2").unwrap();
-	let image = data.get_image(0);
-	let texture =  Texture::make(&image, false);
+	let image = data.to_raw(0, Some(COLOR_KEY));
+	let texture = Texture::make(&image, false);
 
 	window.set_size(image.width() as i32, image.height() as i32);
 	while !window.should_close() {
 		process_events(&mut window, &events);
 		process_frame();
-		draw(&shader, &texture, vao);
+
+		draw(&shader, &texture, &vbo);
 
 		window.swap_buffers();
 		glfw.poll_events();
-	}
-
-	unsafe {
-		gl::DeleteVertexArrays(1, &vao);
 	}
 }

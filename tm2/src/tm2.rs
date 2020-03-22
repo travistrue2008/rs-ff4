@@ -1,6 +1,5 @@
 use byteorder::{ByteOrder, BigEndian, LittleEndian};
 use std::convert::AsMut;
-use std::fmt;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -9,6 +8,8 @@ use std::path::Path;
 const IDENT: u32 = 0x54494d32;
 const SWIZZLE_WIDTH: usize = 16;
 const SWIZZLE_HEIGHT: usize = 8;
+
+type ColorKey = Option<[u8;3]>;
 
 pub enum PixelFormat {
 	Indexed,
@@ -28,31 +29,6 @@ pub enum Error {
 impl From<io::Error> for Error {
 	fn from(err: io::Error) -> Error {
 		Error::Io(err)
-	}
-}
-
-#[derive(Debug)]
-struct Pixel {
-	r: u8,
-	g: u8,
-	b: u8,
-	a: u8,
-}
-
-impl Pixel {
-	fn make(raw: &[u8]) -> Pixel {
-		Pixel {
-			r: raw[0],
-			g: raw[1],
-			b: raw[2],
-			a: raw[3],
-		}
-	}
-}
-
-impl fmt::Display for Pixel {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "px<{:3} {:3} {:3} {:3}>", self.r, self.g, self.b, self.a)
 	}
 }
 
@@ -221,23 +197,25 @@ impl Image {
 	pub fn height(&self) -> i32 {
 		self.header.height as i32
 	}
+}
 
-	pub fn to_raw(&self) -> Vec<u8> {
-		let size = (self.width() * self.height() * 4) as usize;
-		let mut result = Vec::with_capacity(size);
+#[derive(Debug)]
+pub struct RawImage {
+	width: i32,
+	height: i32,
+	pixels: Vec<u8>,
+}
 
-		for pixel in self.pixels.iter() {
-			let start_index = *pixel as usize * 4;
-			let end_index = start_index + 4;
-			let slice = &self.palette[start_index..end_index];
-
-			for comp in slice.iter() {
-				result.push(*comp);
-			}
-		}
-
-		result
+impl RawImage {
+	pub fn make(width: i32, height: i32, pixels: Vec<u8>) -> RawImage {
+		RawImage { width, height, pixels }
 	}
+
+	pub fn width(&self) -> i32 { self.width }
+
+	pub fn height(&self) -> i32 { self.height }
+
+	pub fn pixels(&self) -> &[u8] { &self.pixels }
 }
 
 #[derive(Debug)]
@@ -258,8 +236,38 @@ impl Data {
 		Ok(Data { header, images })
 	}
 
-	pub fn get_image(&self, index: usize) -> &Image {
-		&self.images[index]
+	pub fn to_raw(&self, index: usize, key: ColorKey) -> RawImage {
+		let image = &self.images[index];
+		let size = (image.width() * image.height() * 4) as usize;
+		let mut pixels = Vec::with_capacity(size);
+
+		for pixel in image.pixels.iter() {
+			let start_index = *pixel as usize * 4;
+			let end_index = start_index + 4;
+			let slice = &image.palette[start_index..end_index];
+
+			if let Some(key) = key {
+				let matched =
+					slice[0] == key[0] &&
+					slice[1] == key[1] &&
+					slice[2] == key[2];
+
+				for comp in [
+					slice[0],
+					slice[1],
+					slice[2],
+					if matched { 0 } else { slice[3] },
+				].iter() {
+					pixels.push(*comp);
+				}				
+			} else {
+				for comp in slice.iter() {
+					pixels.push(*comp);
+				}
+			}
+		}
+
+		RawImage::make(image.width(), image.height(), pixels)
 	}
 }
 
