@@ -165,7 +165,7 @@ impl ImageHeader {
 #[derive(Debug)]
 pub struct Image {
 	header: ImageHeader,
-	pixels: Vec::<Pixel>,
+	pixels: Vec::<u8>,
 	palette: Vec::<u8>,
 }
 
@@ -176,15 +176,7 @@ impl Image {
 		let palette_size = header.palette_size as usize;
 		let pixels_slice = get_slice(buffer, offset, image_size);
 		let palette_slice = get_slice(buffer, offset, palette_size);
-		let pixels = Image::unswizzle(pixels_slice, &header)
-			.iter()
-			.map(|&index| {
-				let start_index = index as usize * 4;
-				let end_index = start_index + 4;
-
-				Pixel::make(&palette_slice[start_index..end_index])
-			})
-			.collect::<Vec<Pixel>>();
+		let pixels = Image::unswizzle(pixels_slice, &header);
 
 		Ok(Image {
 			header,
@@ -222,12 +214,29 @@ impl Image {
 		result
 	}
 
-	pub fn width(&self) -> u16 {
-		self.header.width
+	pub fn width(&self) -> i32 {
+		self.header.width as i32
 	}
 
-	pub fn height(&self) -> u16 {
-		self.header.height
+	pub fn height(&self) -> i32 {
+		self.header.height as i32
+	}
+
+	pub fn to_raw(&self) -> Vec<u8> {
+		let size = (self.width() * self.height() * 4) as usize;
+		let mut result = Vec::with_capacity(size);
+
+		for pixel in self.pixels.iter() {
+			let start_index = *pixel as usize * 4;
+			let end_index = start_index + 4;
+			let slice = &self.palette[start_index..end_index];
+
+			for comp in slice.iter() {
+				result.push(*comp);
+			}
+		}
+
+		result
 	}
 }
 

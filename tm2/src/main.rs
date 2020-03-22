@@ -2,6 +2,18 @@ extern crate gl;
 extern crate glfw;
 extern crate image;
 
+mod tm2;
+mod shader;
+mod texture;
+
+use gl::types::*;
+use std::mem;
+use std::os::raw::c_void;
+use std::ptr;
+use std::sync::mpsc::Receiver;
+use shader::Shader;
+use texture::Texture;
+
 use glfw::{
 	Action,
 	Context,
@@ -12,15 +24,6 @@ use glfw::{
 	WindowHint,
 	WindowMode,
 };
-
-use gl::types::*;
-use std::mem;
-use std::os::raw::c_void;
-use std::ptr;
-use std::sync::mpsc::Receiver;
-
-mod tm2;
-mod shader;
 
 const SRC_VERTEX: &str = r#"
 	#version 330 core
@@ -39,32 +42,18 @@ const SRC_VERTEX: &str = r#"
 const SRC_FRAGMENT: &str = r#"
   #version 330 core
 
+  uniform sampler2D u_tex;
+
   in vec2 v_coord;
 
   out vec4 out_color;
 
   void main() {
-	  out_color = vec4(v_coord.x, 0.0, v_coord.y, 1.0);
+	//   out_color = vec4(v_coord.x, 0.0, v_coord.y, 1.0);
+
+	out_color = texture(u_tex, v_coord);
   }
 "#;
-
-fn make_texture(width: i32, height: i32, data: &[u8]) -> GLuint {
-	unsafe {
-		let ptr = data[0] as *const u8 as *const c_void;
-		let mut handle = 0 as GLuint;
-
-		gl::GenTextures(1, &mut handle);
-		gl::BindTexture(gl::TEXTURE_2D, handle);
-		gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
-		gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
-		gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-		gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, width, height, 0, gl::RGB, gl::UNSIGNED_BYTE, ptr);
-		gl::GenerateMipmap(gl::TEXTURE_2D);
-
-		handle
-	}
-}
 
 fn make_vao() -> GLuint {
 	const VERTICES: [f32;16] = [
@@ -100,12 +89,13 @@ fn make_vao() -> GLuint {
 	}
 }
 
-fn draw(program: GLuint, vao: GLuint) {
+fn draw(shader: &Shader, texture: &Texture, vao: GLuint) {
 	unsafe {
-		gl::UseProgram(program);
+		shader.bind();
+		texture.bind(0);
+
 		gl::BindVertexArray(vao);
 		gl::DrawArrays(gl::TRIANGLE_FAN, 0, 4);
-		gl::BindVertexArray(0);
 	}
 }
 
@@ -138,6 +128,7 @@ fn init_gl(window: &mut Window) {
 
 	unsafe {
 		gl::ClearColor(0.2, 0.3, 0.3, 1.0);
+		gl::ActiveTexture(gl::TEXTURE0);
 	}
 }
 
@@ -169,25 +160,24 @@ fn main() {
 
 	init_gl(&mut window);
 
-	let program = shader::Program::make(SRC_VERTEX, SRC_FRAGMENT).unwrap();
+	let shader = Shader::make(SRC_VERTEX, SRC_FRAGMENT).unwrap();
 	let vao = make_vao();
 
 	let data = tm2::load("./assets/cave1_c_base.tm2").unwrap();
 	let image = data.get_image(0);
-	// let tex = make_texture(image.width() as i32, image.height() as i32, &image.pixels);
+	let texture =  Texture::make(&image, false);
 
 	window.set_size(image.width() as i32, image.height() as i32);
 	while !window.should_close() {
 		process_events(&mut window, &events);
 		process_frame();
-		draw(program, vao);
+		draw(&shader, &texture, vao);
 
 		window.swap_buffers();
 		glfw.poll_events();
 	}
 
 	unsafe {
-		// gl::DeleteTextures(1, &tex);
 		gl::DeleteVertexArrays(1, &vao);
 	}
 }

@@ -47,19 +47,17 @@ impl Stage {
 
 impl Drop for Stage {
 	fn drop(&mut self) {
-		println!("Stage::drop()");
-
 		unsafe { gl::DeleteShader(self.handle) };
 		self.handle = 0;
 	}
 }
 
-pub struct Program {
+pub struct Shader {
 	handle: GLuint,
 }
 
-impl Program {
-	pub fn make(vert_src: &str, frag_src: &str) -> Result<GLuint, String> {
+impl Shader {
+	pub fn make(vert_src: &str, frag_src: &str) -> Result<Shader, String> {
 		let vert_handle = Stage::make(ShaderKind::Vertex, vert_src)?;
 		let frag_handle = Stage::make(ShaderKind::Fragment, frag_src)?;
 
@@ -82,9 +80,13 @@ impl Program {
 
 				Err(str::from_utf8(&log).unwrap().into())
 			} else {
-				Ok(handle)
+				Ok(Shader { handle })
 			}
 		}
+	}
+
+	pub fn bind(&self) {
+		unsafe { gl::UseProgram(self.handle) };
 	}
 
 	pub fn handle(&self) -> GLuint {
@@ -92,10 +94,8 @@ impl Program {
 	}
 }
 
-impl Drop for Program {
+impl Drop for Shader {
 	fn drop(&mut self) {
-		println!("Program::drop()");
-
 		unsafe { gl::DeleteProgram(self.handle) };
 		self.handle = 0;
 	}
