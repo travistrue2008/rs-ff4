@@ -77,7 +77,7 @@ struct ImageHeader {
 impl ImageHeader {
 	fn read(buffer: &[u8], offset: &mut usize) -> Result<ImageHeader, Error> {
 		let mut load_part = |size| { get_slice(&buffer, offset, size) };
-
+	
 		let result = ImageHeader {
 			total_size: LittleEndian::read_u32(load_part(4)),
 			palette_size: LittleEndian::read_u32(load_part(4)),
@@ -177,8 +177,9 @@ impl Image {
 					for tile_x in x..(x + SWIZZLE_WIDTH) {
 						if tile_x < width && tile_y < height {
 							let index = (tile_y * width + tile_x) as usize;
-
-							result[index] = buffer[i];
+							if let Some(v) = buffer.get(i) {
+								result[index] = *v;
+							}
 						}
 
 						i += 1;

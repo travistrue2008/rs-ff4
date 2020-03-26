@@ -159,7 +159,7 @@ fn main() {
 		Vertex::make( 1.0, -1.0, 1.0, 1.0),
 	], &Vertex::attrs());
 
-	let data = tm2::load("./assets/cave1_c_base.tm2").unwrap();
+	let data = tm2::load("./assets/image_panel000.tm2").unwrap();
 	let image = data.to_raw(0, Some(COLOR_KEY));
 	let texture = Texture::make(&image, false);
 
