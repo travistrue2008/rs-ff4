@@ -1,3 +1,5 @@
+extern crate byteorder;
+
 use byteorder::{ByteOrder, LittleEndian};
 use std::fs;
 use std::fs::File;
@@ -77,24 +79,84 @@ fn read_header(buffer: &[u8], offset: &mut usize) -> Header {
 	Header { count, entries }
 }
 
+fn decode_lztx(buffer: &[u8]) -> Vec<u8> {
+	let mut pos = 0;
+	let mut dec_pos = 0;
+	let mut control = 0;
+	let mut result = Vec::new();
+
+	while pos < buffer.len() - 1 {
+		control = buffer[pos];
+		pos += 1;
+
+		for i in 0..8 {
+			if ((control >> i) & 0x1) == 0 {
+				let byte1 = buffer[pos] as usize;
+				let byte2 = buffer[pos+1] as usize;
+				let length = (byte2 & 0x0F) as i32 + 3;
+				let offset = (((byte2 & 0xF0) << 4) | byte1) as i32;
+				let mut r = dec_pos - ((dec_pos + 0xFEE - offset) & 0xFFF);
+				pos += 2;
+
+				for _ in 0..length {
+					if r >= 0 {
+						result.push(result[r as usize]);
+					} else {
+						result.push(0);
+					}
+
+					dec_pos += 1;
+					r += 1;
+				}
+			} else {
+				result.push(buffer[pos]);
+				dec_pos += 1;
+				pos += 1;
+			}
+
+			if pos >= buffer.len() {
+				break;
+			}
+		}
+	}
+
+	result
+}
+
+fn decode_file(buffer: &[u8], entry: &FileEntry) -> Vec<u8> {
+	let start_offset = entry.offset;
+	let end_offset = start_offset + entry.size as usize;
+	let slice = &buffer[start_offset..end_offset];
+	let ident =
+		(slice[0] as u32) << 24 |
+		(slice[1] as u32) << 16 |
+		(slice[2] as u32) <<  8 |
+		(slice[3] as u32);
+
+	if ident == 0x4c5a5458 {
+		decode_lztx(&slice[8..])
+	} else {
+		slice.to_vec()
+	}
+}
+
 fn main() {
 	let mut offset: usize = 0;
 	let mut buffer = Vec::new();
-	let mut file = File::open("./assets/CN_ancient_waterway.lzs").unwrap();
+	let mut file = File::open("./assets/menu_gallery_pic.lzs").unwrap();
 	
-	file.read_to_end(&mut buffer);
+	file.read_to_end(&mut buffer).unwrap();
+	fs::create_dir_all("./assets/menu_gallery_pic/").unwrap();
 
 	let header = read_header(&buffer, &mut offset);
-	for (i, entry) in header.entries.iter().enumerate() {
-		fs::create_dir_all("./assets/CN_ancient_waterway/");
-
-		let path = format!("./assets/CN_ancient_waterway/{}", entry.name);
+	for entry in header.entries {
+		let path = format!("./assets/menu_gallery_pic/{}", entry.name);
 		let mut file = File::create(path).unwrap();
+		let mut pos = 0;
+		let decoded = decode_file(&buffer, &entry);
 
-		let start_offset = entry.offset;
-		let end_offset = start_offset + entry.size as usize;
-		let slice = &buffer[start_offset..end_offset];
-
-		file.write(slice);
+		while pos < decoded.len() {
+			pos += file.write(&decoded[pos..]).unwrap();
+		}
 	}
 }
