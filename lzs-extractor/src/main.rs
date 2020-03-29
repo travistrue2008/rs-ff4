@@ -5,6 +5,7 @@ use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::str;
+use std::path::Path;
 
 struct FileEntry {
 	offset: usize,
@@ -15,6 +16,14 @@ struct FileEntry {
 struct Header {
 	count: u16,
 	entries: Vec<FileEntry>,
+}
+
+fn has_tm2_header(slice: &[u8]) -> bool {
+	if let Ok(header) = str::from_utf8(&slice) {
+		header == "TIM2"
+	} else {
+		false
+	}
 }
 
 fn get_slice<'a>(buffer: &'a [u8], offset: &mut usize, length: usize) -> &'a [u8] {
@@ -127,36 +136,60 @@ fn decode_file(buffer: &[u8], entry: &FileEntry) -> Vec<u8> {
 	let start_offset = entry.offset;
 	let end_offset = start_offset + entry.size as usize;
 	let slice = &buffer[start_offset..end_offset];
-	let ident =
-		(slice[0] as u32) << 24 |
-		(slice[1] as u32) << 16 |
-		(slice[2] as u32) <<  8 |
-		(slice[3] as u32);
 
-	if ident == 0x4c5a5458 {
-		decode_lztx(&slice[8..])
-	} else {
-		slice.to_vec()
+	if has_tm2_header(&slice[5..9]) {
+		return decode_lztx(&slice[4..]);
+	}
+
+	if has_tm2_header(&slice[9..13]) {
+		return decode_lztx(&slice[8..]);
+	}
+	
+	slice.to_vec()
+}
+
+fn write_file<P: AsRef<Path>>(path: P, buffer: &[u8]) {
+	let mut pos = 0;
+	let mut file = File::create(path).unwrap();
+
+	while pos < buffer.len() {
+		pos += file.write(&buffer[pos..]).unwrap();
+	}
+}
+
+fn extract_files(buffer: &[u8], archive_name: &str) {
+	let mut offset: usize = 0;
+	let header = read_header(&buffer, &mut offset);
+
+	let path = format!("./assets/{}", archive_name);
+	fs::create_dir_all(path).unwrap();
+
+	for entry in header.entries {
+		let decoded = decode_file(&buffer, &entry);
+		let raw_path = format!("./assets/{}/{}", archive_name, entry.name);
+		let path = if has_tm2_header(&decoded[0..4]) {
+			let stem = Path::new(&entry.name).file_stem().unwrap().to_str().unwrap();
+
+			format!("./assets/{}/{}.tm2", archive_name, &stem)
+		} else {
+			raw_path
+		};
+
+		write_file(path, &decoded);
 	}
 }
 
 fn main() {
-	let mut offset: usize = 0;
 	let mut buffer = Vec::new();
-	let mut file = File::open("./assets/menu_gallery_pic.lzs").unwrap();
+	let mut file = File::open("./assets/00ta_mon.lzs").unwrap();
 	
 	file.read_to_end(&mut buffer).unwrap();
-	fs::create_dir_all("./assets/menu_gallery_pic/").unwrap();
 
-	let header = read_header(&buffer, &mut offset);
-	for entry in header.entries {
-		let path = format!("./assets/menu_gallery_pic/{}", entry.name);
-		let mut file = File::create(path).unwrap();
-		let mut pos = 0;
-		let decoded = decode_file(&buffer, &entry);
+	if has_tm2_header(&buffer[5..9]) {
+		let decoded = decode_lztx(&buffer[4..]);
 
-		while pos < decoded.len() {
-			pos += file.write(&decoded[pos..]).unwrap();
-		}
+		write_file("./assets/00ta_mon.tm2", &decoded);
+	} else {
+		extract_files(&buffer, "00ta_mon");
 	}
 }
