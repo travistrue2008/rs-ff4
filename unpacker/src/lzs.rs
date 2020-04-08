@@ -1,3 +1,5 @@
+use crate::common::*;
+
 use byteorder::{ByteOrder, LittleEndian};
 use std::fs;
 use std::fs::File;
@@ -14,34 +16,6 @@ struct FileEntry {
 struct Header {
     count: u16,
     entries: Vec<FileEntry>,
-}
-
-fn has_tm2_header(slice: &[u8]) -> bool {
-    if let Ok(header) = str::from_utf8(&slice) {
-        header == "TIM2"
-    } else {
-        false
-    }
-}
-
-fn get_slice<'a>(buffer: &'a [u8], offset: &mut usize, length: usize) -> &'a [u8] {
-    let start_index = *offset as usize;
-    let end_index = start_index + length;
-
-    *offset += length;
-    &buffer[start_index..end_index]
-}
-
-fn read_u16(buffer: &[u8], offset: &mut usize) -> u16 {
-    let slice = get_slice(buffer, offset, 2);
-
-    LittleEndian::read_u16(slice)
-}
-
-fn read_usize(buffer: &[u8], offset: &mut usize) -> usize {
-    let slice = get_slice(buffer, offset, 4);
-
-    LittleEndian::read_u32(slice) as usize
 }
 
 fn read_str(buffer: &[u8], offset: &mut usize) -> String {
@@ -71,10 +45,10 @@ fn read_header(buffer: &[u8], offset: &mut usize) -> Header {
     for i in 0..(count as u32) {
         *offset += if i > 0 { 4 } else { 2 };
 
-        let file_offset = read_usize(buffer, offset);
-        let size = read_usize(buffer, offset);
-        let file_num = read_usize(buffer, offset);
-        let name = read_str(buffer, offset);
+        let file_offset = read_u32(buffer, offset) as u32;
+        let size = read_u32(buffer, offset) as u32;
+        let file_num = read_u32(buffer, offset) as u32;
+        let name = read_str(buffer, offset, 48);
 
         entries.push(FileEntry {
             offset: file_offset,

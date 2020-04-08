@@ -5,5 +5,4 @@ authors = ["travistrue2008 <travis.true08@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-bitreader = "0.3.2"
 byteorder = "1.3.4"
