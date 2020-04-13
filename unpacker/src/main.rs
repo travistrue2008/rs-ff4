@@ -1,11 +1,8 @@
 mod common;
 mod error;
-mod pac_directory;
-
-use pac_directory::Directory;
+mod metadata;
+mod unpacker;
 
 fn main() {
-    let directory = Directory::load("assets/PAC0.BIN").unwrap();
-
-    println!("directory: {:?}", directory);
+    unpacker::unpack("assets/PAC0.BIN", "assets/PAC1.BIN", "assets/data").unwrap();
 }
