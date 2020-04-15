@@ -13,7 +13,6 @@ pub fn decode(src: &[u8]) -> Result<Vec::<u8>> {
     let mut dest = Vec::with_capacity(src_len);
     let mut text_buf = [0u8; MAX_LENGTH + WINDOW_SIZE - 1];
 
-    // print!("LEN: {}", src_len);
     while offset < src_len {
         if f_pos == 0 {
             flags = src[offset];
