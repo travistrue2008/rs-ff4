@@ -190,12 +190,13 @@ fn process_directory(archive: &mut File, nodes: &Children, path: &Path) -> Resul
     Ok(())
 }
 
-pub fn unpack<P: AsRef<Path>>(meta_path: P, archive_path: P, root_dir: P) -> Result<()> {
+pub fn unpack<P: AsRef<Path>>(meta_path: P, archive_path: P, output_dir: P) -> Result<()> {
+    let output_dir = output_dir.as_ref().join("data");
     let metadata = Metadata::load(meta_path)?;
-    let mut archive = File::open(archive_path)?;
+    let mut archive = File::open(archive_path).expect("Archive file not found");
     let nodes = metadata.root()?;
 
-    process_directory(&mut archive, nodes, root_dir.as_ref())?;
+    process_directory(&mut archive, nodes, output_dir.as_ref())?;
 
     Ok(())
 }

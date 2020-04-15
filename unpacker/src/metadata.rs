@@ -134,7 +134,7 @@ impl Metadata {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Metadata> {
         let mut offset = 0usize;
         let mut buffer = Vec::new();
-        let mut file = fs::File::open(path)?;
+        let mut file = fs::File::open(path).expect("Index file not found");
 
         file.read_to_end(&mut buffer)?;
         Metadata::read(&buffer, &mut offset)
