@@ -1,5 +1,6 @@
 mod common;
 mod error;
+mod lzss;
 mod metadata;
 mod unpacker;
 

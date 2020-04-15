@@ -87,7 +87,7 @@ struct Info {
 
 impl Info {
     fn read(buffer: &[u8], offset: &mut usize) -> Info {
-        read_u16(buffer, offset);
+        get_slice(buffer, offset, 0x2);
 
         let kind = if read_u16(buffer, offset) == 1 {
             InfoKind::File
@@ -99,7 +99,7 @@ impl Info {
         let filename_length = read_u32(buffer, offset) as usize;
         let file_offset = read_u32(buffer, offset) as usize;
         let file_real_size = read_u32(buffer, offset) as usize;
-        read_u32(buffer, offset);
+        get_slice(buffer, offset, 0x4);
 
         let record_id = read_u32(buffer, offset);
         let file_full_size = read_u32(buffer, offset) as usize;
@@ -187,7 +187,8 @@ impl Metadata {
 
         for i in 0..record.info_count {
             let info = &infos[record.info_offset + i];
-            let filename = String::from(&names[&info.filename_offset]);
+            let name = &names[&info.filename_offset];
+            let filename = String::from(name);
 
             children.push(match info.kind {
                 InfoKind::File => Node::File(filename, info.file_offset, info.file_real_size),

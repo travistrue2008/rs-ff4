@@ -5,7 +5,10 @@ pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
+    NoBasePath,
     InvalidNodeKind,
+    InvalidFileNum(usize, usize),
+    InvalidDecodeLength(usize, usize),
     Io(io::Error),
 }
 
