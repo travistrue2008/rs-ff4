@@ -81,7 +81,7 @@ fn process_lines(lines: &Vec<String>) -> Vec<Enemy> {
 
 					if id != item.id {
 						list.push(item);
-						item = item::make(id);
+						item = Enemy::make(id);
 					}
 				},
 				"Name" => (item.name = line.replace("Name: ", "")),
