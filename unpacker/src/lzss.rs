@@ -4,12 +4,12 @@ const THRESHOLD: usize = 2;
 const MAX_LENGTH: usize = 18;
 const WINDOW_SIZE: usize = 4096;
 
-pub fn decode(src: &[u8], start_offset: usize) -> Result<Vec::<u8>> {
+pub fn decode(src: &[u8]) -> Result<Vec::<u8>> {
     let src_len = src.len();
     let mut flags = 0u8;
     let mut f_pos = 0usize;
     let mut r_pos = WINDOW_SIZE - MAX_LENGTH;
-    let mut offset = start_offset;
+    let mut offset = 0usize;
     let mut dest = Vec::with_capacity(src_len);
     let mut text_buf = [0u8; MAX_LENGTH + WINDOW_SIZE - 1];
 

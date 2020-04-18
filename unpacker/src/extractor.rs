@@ -30,7 +30,7 @@ fn get_tm2_header_offset(buffer: &[u8]) -> Option<usize> {
 
 fn decode_buffer(buffer: &[u8]) -> Result<Vec<u8>> {
     match get_tm2_header_offset(buffer) {
-        Some(i) => lzss::decode(&buffer[i..], 0),
+        Some(i) => lzss::decode(&buffer[i..]),
         None => Ok(buffer.to_vec()),
     }
 }
@@ -99,11 +99,11 @@ pub mod lzs {
         match decode_entry(&buffer, entry) {
             Ok(decoded) => {
                 let mut path = path.as_ref().join(&entry.name);
-    
+
                 if decoded.len() > 4 && has_tm2_header(&decoded[0..4]) {
                     path = replace_ext(path, "tm2")?;
                 }
-    
+
                 write_file(path, &decoded)
             },
             Err(Error::InvalidDecodeLength(offset, len)) => {
@@ -118,7 +118,7 @@ pub mod lzs {
         }
     }
     
-    pub fn process_buffer<P: AsRef<Path>>(path: P, buffer: &[u8], recursive: bool) -> Result<()> {
+    pub fn process_buffer<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
         let mut offset: usize = 0;
     
         match read_header(&buffer, &mut offset) {
@@ -151,12 +151,12 @@ pub mod lzs {
         }
     }
 
-    pub fn process_file<P: AsRef<Path>>(input_path: P, output_path: P, recursive: bool) -> Result<()> {
+    pub fn process_file<P: AsRef<Path>>(input_path: P, output_path: P) -> Result<()> {
         let mut file = File::open(input_path)?;
         let mut buffer = Vec::new();
 
         file.read_to_end(&mut buffer)?;
-        process_buffer(&output_path, &buffer, recursive)?;
+        process_buffer(&output_path, &buffer)?;
 
         Ok(())
     }
@@ -176,10 +176,10 @@ pub mod bin {
     fn process_file(path: &Path, buffer: &[u8], ext: &str, recursive: bool) -> Result<()> {
         match ext {
             "lzs" => {
-                let decoded = lzss::decode(&buffer, 4)?;
+                let decoded = lzss::decode(&buffer[4..])?;
 
                 if recursive {
-                    super::lzs::process_buffer(path, &decoded, recursive)?;
+                    super::lzs::process_buffer(path, &decoded)?;
                 } else {
                     write_file(path, &decoded)?;
                 }
@@ -228,7 +228,6 @@ pub mod bin {
     }
 
     pub fn process<P: AsRef<Path>>(meta_path: P, archive_path: P, output_dir: P, recursive: bool) -> Result<()> {
-        let output_dir = output_dir.as_ref().join("data");
         let metadata = Metadata::load(meta_path)?;
         let mut archive = File::open(archive_path).expect("Archive file not found");
         let nodes = metadata.root()?;

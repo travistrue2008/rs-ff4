@@ -33,11 +33,10 @@ fn process_bin(matches: &ArgMatches) {
 }
 
 fn process_lzs(matches: &ArgMatches) {
-    let recursive = matches.is_present("recursive");
     let input_path = get_input_path(matches);
     let output_path = get_output_path(matches);
 
-    lzs::process_file(&input_path, &output_path, recursive).unwrap();
+    lzs::process_file(&input_path, &output_path).unwrap();
 }
 
 fn main() {
@@ -70,11 +69,7 @@ fn main() {
                 .short("o")
                 .long("output")
                 .help("Output path")
-                .takes_value(true))
-            .arg(Arg::with_name("recursive")
-                .short("r")
-                .long("recursive")
-                .help("Recursively decompress subsequent lzs files")));
+                .takes_value(true)));
 
     let matches = app.get_matches();
 
