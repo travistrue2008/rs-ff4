@@ -1,10 +1,16 @@
+use crate::common::*;
 use crate::error::Result;
 use crate::lzss;
 
+use image;
+use image::ColorType;
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 use std::str;
+use tim2;
+use tim2::{Pixel};
 
 fn has_tm2_header(slice: &[u8]) -> bool {
     if let Ok(header) = str::from_utf8(&slice) {
@@ -35,12 +41,41 @@ fn decode_buffer(buffer: &[u8]) -> Result<Vec<u8>> {
     }
 }
 
+fn write_png<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
+    let color_key = Pixel::from(0, 255, 0, 255);
+    let image_result = std::panic::catch_unwind(|| tim2::from_buffer(&buffer).unwrap());
+
+    match image_result {
+        Ok(image) => {
+            let frame = image.get_frame(0);
+            if !frame.has_mipmaps() {
+                let width = frame.width() as u32;
+                let height = frame.height() as u32;
+                let raw_pixels = frame.to_raw(Some(color_key));
+                let path = replace_ext(&path, "png")?;
+
+                image::save_buffer(path, &raw_pixels, width, height, ColorType::Rgba8).unwrap();
+            }
+        },
+        Err(_) => println!("WARNING: unable to transmute to PNG: {:?}", path.as_ref()),
+    }
+
+    Ok(())
+}
+
 fn write_file<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
-    let mut pos = 0;
-    let mut file = File::create(path)?;
+    let mut pos = 0usize;
+    let mut file = File::create(&path)?;
+    let path_ref = &path.as_ref();
 
     while pos < buffer.len() {
         pos += file.write(&buffer[pos..])?;
+    }
+
+    if let Some(ext) = path_ref.extension().and_then(OsStr::to_str) {
+        if ext == "tm2" {
+            write_png(path, buffer)?;
+        }
     }
 
     Ok(())
@@ -48,7 +83,6 @@ fn write_file<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
 
 pub mod lzs {
     use super::*;
-    use crate::common::*;
     use crate::error::{Result, Error};
 
     use std::fs;
