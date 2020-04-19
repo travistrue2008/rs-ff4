@@ -425,6 +425,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "game"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "cgmath",
+ "gl",
+ "gl_toolkit",
+ "glfw",
+ "image",
+ "rodio",
+ "serde",
+ "serde_json",
+ "tim2",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -463,6 +479,16 @@ dependencies = [
  "khronos_api",
  "log",
  "xml-rs",
+]
+
+[[package]]
+name = "gl_toolkit"
+version = "0.1.0"
+source = "git+https://github.com/travistrue2008/gl-toolkit-rs#c31f722d649e3cda0379e7fa7326fc7ad3493c70"
+dependencies = [
+ "gl",
+ "lazy_static",
+ "vex",
 ]
 
 [[package]]
@@ -1328,19 +1354,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpg"
-version = "0.1.0"
-dependencies = [
- "cgmath",
- "gl",
- "glfw",
- "image",
- "rodio",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1613,6 +1626,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tim2"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a607c43cd11020b11ec6cdf13468eb36cfa2e72d0d48d9367eaa183086453ad9"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
 name = "time"
 version = "0.1.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1745,6 +1767,8 @@ version = "0.1.0"
 dependencies = [
  "byteorder",
  "clap",
+ "image",
+ "tim2",
 ]
 
 [[package]]
@@ -1775,6 +1799,12 @@ name = "version_check"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "078775d0255232fb988e6fccf26ddc9d1ac274299aaedcedce21c6f72cc533ce"
+
+[[package]]
+name = "vex"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b0a10f9e530910eef668fbe7efcea940e2b99093e9757b38c940bc6b8174eb5"
 
 [[package]]
 name = "want"

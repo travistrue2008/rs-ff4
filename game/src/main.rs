@@ -1,33 +1,31 @@
-extern crate gl;
-extern crate glfw;
-extern crate image;
+mod common;
+mod defs;
+mod error;
+mod tileset;
 
-use glfw::{Action, Context, Glfw, Key, Window, WindowEvent, WindowHint, WindowMode};
-
+use std::cell::Cell;
 use std::path::Path;
 use std::sync::mpsc::Receiver;
+use std::vec;
+use tim2;
 
-mod defs;
+use gl_toolkit::{
+	SHADER_TEXTURE,
+	Texture,
+	VBO,
+	TextureVertex,
+};
 
-const SHADER_VERTEX_SRC: &str = r#"
-	#version 330 core
-
-	layout (location = 0) in vec3 a_pos;
-
-	void main() {
-		gl_Position = vec4(a_pos.x, a_pos.y, a_pos.z, 1.0);
-	}
-"#;
-
-const SHADER_FRAGMENT_SRC: &str = r#"
-  #version 330 core
-
-  out vec4 out_color;
-
-  void main() {
-	  out_color = vec4(1.0, 0.5, 0.2, 1.0);
-  }
-"#;
+use glfw::{
+	Action,
+	Context,
+	Key,
+	Glfw,
+	Window,
+	WindowEvent,
+	WindowHint,
+	WindowMode,
+};
 
 // fn initDefs () {
 // 	let definitions: defs::Definitions = defs::load();
@@ -55,7 +53,11 @@ fn create_icon() -> Vec<glfw::PixelImage> {
 }
 
 fn init_glfw() -> Glfw {
-    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+    let mut glfw = glfw::init(Some(glfw::Callback {
+		f: error_callback,
+		data: Cell::new(0),
+    })).unwrap();
+
     glfw.window_hint(WindowHint::ContextVersion(4, 1));
     glfw.window_hint(WindowHint::OpenGlForwardCompat(true));
     glfw.window_hint(WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
@@ -84,6 +86,11 @@ fn init_gl(window: &mut Window) {
     }
 }
 
+fn error_callback(_: glfw::Error, description: String, error_count: &Cell<usize>) {
+	println!("GLFW error ({}): {}", error_count.get(), description);
+	error_count.set(error_count.get() + 1);
+}
+
 fn process_events(window: &mut Window, events: &Receiver<(f64, WindowEvent)>) {
     for (_, event) in glfw::flush_messages(&events) {
         match event {
@@ -102,15 +109,48 @@ fn process_frame() {
     }
 }
 
+fn draw(texture: &Texture, vbo: &VBO) {
+	SHADER_TEXTURE.bind();
+	texture.bind(0);
+	vbo.draw();
+}
+
 fn main() {
     let mut glfw = init_glfw();
     let (mut window, events) = init_window(&glfw);
 
     init_gl(&mut window);
 
+    let vbo = VBO::make(&vec![
+        TextureVertex::make( 1.0,  1.0, 1.0, 0.0),
+        TextureVertex::make(-1.0,  1.0, 0.0, 0.0),
+        TextureVertex::make(-1.0, -1.0, 0.0, 1.0),
+        TextureVertex::make( 1.0, -1.0, 1.0, 1.0),
+    ]);
+
+    let image = tim2::load("./assets/tileset/dtown_h_base.tm2").unwrap();
+    let frame = image.get_frame(0);
+    let pixels = frame.to_raw(None);
+    let texture = Texture::make(&pixels, frame.width(), frame.height(), false).unwrap();
+
+    let tileset = tileset::load("./assets/tileset/dtown_agart_01.cn2").unwrap();
+
+    println!("tileset_dims: <{}, {}>", tileset.width, tileset.height);
+    for i in 0..(tileset.cells.len() / tileset.width) {
+        let start_index = i * tileset.width;
+        let end_index = start_index + tileset.width;
+        let slice = &tileset.cells[start_index..end_index];
+        let indices: Vec::<usize> = slice.to_vec().iter().map(|cell| { cell.v1 }).collect();
+
+        println!("{:?}", &indices);
+    }
+
     while !window.should_close() {
         process_events(&mut window, &events);
         process_frame();
+
+        draw(&texture, &vbo);
+
         window.swap_buffers();
         glfw.poll_events();
     }
