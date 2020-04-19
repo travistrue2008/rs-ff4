@@ -2,7 +2,7 @@ use crate::common::*;
 use crate::error::{Result, Error};
 
 use std::collections::HashMap;
-use std::fs;
+use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 use std::str;
@@ -134,7 +134,7 @@ impl Metadata {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Metadata> {
         let mut offset = 0usize;
         let mut buffer = Vec::new();
-        let mut file = fs::File::open(path).expect("Index file not found");
+        let mut file = File::open(path).expect("Index file not found");
 
         file.read_to_end(&mut buffer)?;
         Metadata::read(&buffer, &mut offset)
