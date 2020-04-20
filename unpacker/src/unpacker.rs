@@ -10,7 +10,7 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::str;
 use tim2;
-use tim2::{Pixel};
+use tim2::Pixel;
 
 fn has_tm2_header(slice: &[u8]) -> bool {
     if let Ok(header) = str::from_utf8(&slice) {
