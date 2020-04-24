@@ -7,15 +7,6 @@ use std::cell::Cell;
 use std::path::Path;
 use std::sync::mpsc::Receiver;
 use std::vec;
-use tim2;
-
-use gl_toolkit::{
-    SHADER_TEXTURE,
-    PrimitiveKind,
-	Texture,
-	VBO,
-	TextureVertex,
-};
 
 use glfw::{
 	Action,
