@@ -83,7 +83,10 @@ fn init_gl(window: &mut Window) {
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
     unsafe {
-        gl::ClearColor(0.2, 0.3, 0.3, 1.0);
+        gl::Enable(gl::BLEND);
+		gl::ClearColor(0.2, 0.3, 0.3, 1.0);
+		gl::ActiveTexture(gl::TEXTURE0);
+		gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
     }
 }
 
@@ -108,12 +111,6 @@ fn process_frame() {
     unsafe {
         gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
     }
-}
-
-fn draw(texture: &Texture, vbo: &VBO) {
-	SHADER_TEXTURE.bind();
-	texture.bind(0);
-	vbo.draw();
 }
 
 fn main() {

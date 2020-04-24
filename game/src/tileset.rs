@@ -1,11 +1,11 @@
 use crate::common::*;
-use crate::error::{Result, Error};
+use crate::error::Result;
 
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 use tim2;
-use tim2::{Frame, Pixel};
+use tim2::Pixel;
 
 use gl_toolkit::{
     SHADER_TEXTURE,
@@ -23,6 +23,7 @@ use vex::{
     Vector3,
 };
 
+const TEXTURE_SIZE: usize = 512;
 const ATLAS_WIDTH: usize = 1024;
 const TEXEL: f32 = 1.0 / ATLAS_WIDTH as f32;
 const TILE_SIZE: f32 = 32.0;
@@ -42,7 +43,7 @@ const COORDS: [f32; 8] = [
     TILE_MAG, TILE_MAG,
 ];
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TextureKind {
     Base,
     Var,
@@ -75,6 +76,16 @@ impl TextureKind {
             TextureKind::Anm => "anm",
         }
     }
+
+    fn get_atlas_offset(&self) -> Vector2 {
+        let mag = TEXTURE_SIZE as f32 * TEXEL;
+
+        match self {
+            TextureKind::Base => Vector2::new(),
+            TextureKind::Var => Vector2::make(mag, 0.0),
+            TextureKind::Anm => Vector2::make(0.0, mag),
+        }
+    }
 }
 
 pub struct Cell {
@@ -100,7 +111,7 @@ impl Tileset {
         let width = read_u16(&buffer, &mut offset) as usize;
         let height = read_u16(&buffer, &mut offset) as usize;
         let cell_count = width * height;
-        let layers = (0..1).map(|_| { /* TODO: change 0..1 to 0..3 */
+        let layers = (0..2).map(|_| { /* TODO: figure out what Layer 3 does... */
             let slice = read_slice(&buffer, &mut offset, cell_count * 2);
             let cells = (0..(width * height)).map(|e| {
                 Cell {
@@ -137,10 +148,10 @@ impl Tileset {
             let x_tile = (cell.index % 16) as f32;
             let y_tile = (cell.index / 16) as f32;
 
-            vertices[vert_offset + 0] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 0);
-            vertices[vert_offset + 1] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 1);
-            vertices[vert_offset + 2] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 2);
-            vertices[vert_offset + 3] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 3);
+            vertices[vert_offset + 0] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 0, cell.kind);
+            vertices[vert_offset + 1] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 1, cell.kind);
+            vertices[vert_offset + 2] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 2, cell.kind);
+            vertices[vert_offset + 3] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 3, cell.kind);
 
             indices[index_offset + 0] = vert_offset as u16 + 0;
             indices[index_offset + 1] = vert_offset as u16 + 1;
@@ -153,7 +164,7 @@ impl Tileset {
         VBO::make(PrimitiveKind::Triangles, &vertices, Some(&indices))
     }
 
-    fn build_vertex(map_width: f32, map_height: f32, x_cell: f32, y_cell: f32, x_tile: f32, y_tile: f32, corner_index: usize) -> TextureVertex {
+    fn build_vertex(map_width: f32, map_height: f32, x_cell: f32, y_cell: f32, x_tile: f32, y_tile: f32, corner_index: usize, kind: TextureKind) -> TextureVertex {
         let proj_mat = Matrix4::ortho(0.0, map_width, 0.0, map_height, 0.0, 1000.0);
 
         let x = POS[corner_index * 2 + 0] + (x_cell * TILE_SIZE);
@@ -162,7 +173,7 @@ impl Tileset {
         let v = COORDS[corner_index * 2 + 1] + (y_tile as f32 * TILE_MAG);
     
         let pos = Vector2::from(proj_mat.transform_point(&Vector3::make(x, y, 0.0)));
-        let coord = Vector2::make(u, v);
+        let coord = Vector2::make(u, v) + kind.get_atlas_offset();
     
         TextureVertex::make_from_parts(pos, coord)
     }
@@ -207,16 +218,14 @@ fn load_frame<P: AsRef<Path>>(path: P, name: &str, kind: TextureKind) -> Result<
 }
 
 fn build_texture<P: AsRef<Path>>(path: P, name: &str) -> Result<Texture> {
-    const TEX_SIZE: usize = 512;
-
     let base_pixels = load_frame(&path, name, TextureKind::Base)?;
     let var_pixels = load_frame(&path, name, TextureKind::Var)?;
     let anm_pixels = load_frame(&path, name, TextureKind::Anm)?;
     let tex = Texture::new(1024, 1024);
 
-    tex.write(&base_pixels, 0, 0, TEX_SIZE, TEX_SIZE);
-    tex.write(&var_pixels, TEX_SIZE, 0, TEX_SIZE, TEX_SIZE);
-    tex.write(&anm_pixels, 0, TEX_SIZE, TEX_SIZE, TEX_SIZE);
+    tex.write(&base_pixels, 0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+    tex.write(&var_pixels, TEXTURE_SIZE, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+    tex.write(&anm_pixels, 0, TEXTURE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
 
     Ok(tex)
 }
