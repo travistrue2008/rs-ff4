@@ -9,6 +9,7 @@ use tim2::Pixel;
 
 use gl_toolkit::{
     SHADER_TEXTURE,
+    BufferMode,
     PrimitiveKind,
     Texture,
     VBO,
@@ -93,14 +94,48 @@ pub struct Cell {
     kind: TextureKind,
 }
 
+impl Cell {
+    fn should_process(&self, animated: bool) -> bool {    
+        if animated {
+            self.kind == TextureKind::Anm
+        } else {
+            self.kind != TextureKind::Anm
+        }
+    }
+}
+
 pub struct Layer {
-    vbo: VBO,
+    base_vbo: VBO,
+    anim_vbo: VBO,
+    anim_verts: Vec::<TextureVertex>,
     cells: Vec::<Cell>,
+}
+
+impl Layer {
+    fn update_anim_uvs(&mut self, frame_index: usize) {
+        let mut cell_offset = 0;
+
+        for cell in self.cells.iter() {
+            if cell.kind == TextureKind::Anm {
+                let vert_offset = cell_offset * 4;
+                let x_tile = ((cell.index as usize % 16) + frame_index) as f32;
+
+                for e in 0..4 {
+                    self.anim_verts[vert_offset + e].coord.x = COORDS[e * 2] + (x_tile * TILE_MAG);
+                }
+
+                cell_offset += 1;
+            }
+        }
+
+        self.anim_vbo.write_vertices(&self.anim_verts, 0);
+    }
 }
 
 pub struct Tileset {
     width: usize,
     height: usize,
+    frame_index: usize,
     layers: Vec::<Layer>,
     texture: Texture,
 }
@@ -120,13 +155,19 @@ impl Tileset {
                 }
             }).collect();
 
+            let (_, base_vbo) = Tileset::build_vbo(width, height, &cells, false);
+            let (anim_verts, anim_vbo) = Tileset::build_vbo(width, height, &cells, true);
+
             Layer {
-                vbo: Tileset::build_vbo(&cells, width, height),
+                base_vbo,
+                anim_vbo,
+                anim_verts,
                 cells,
             }
         }).collect();
 
         Tileset {
+            frame_index: 0,
             width,
             height,
             layers,
@@ -134,34 +175,50 @@ impl Tileset {
         }
     }
 
-    fn build_vbo(cells: &Vec::<Cell>, width: usize, height: usize) -> VBO {
+    fn build_vbo(width: usize, height: usize, cells: &Vec::<Cell>, animated: bool) -> (Vec::<TextureVertex>, VBO) {
         let map_width = width as f32 * TILE_SIZE;
         let map_height = height as f32 * TILE_SIZE;
         let mut vertices = vec![TextureVertex::new(); cells.len() * 4];
         let mut indices = vec![0; cells.len() * 6];
+        let mut cell_offset = 0;
+
+        let mode = if animated {
+            BufferMode::StaticDraw
+        } else {
+            BufferMode::DynamicDraw
+        };
 
         for (i, cell) in cells.iter().enumerate() {
-            let vert_offset = i * 4;
-            let index_offset = i * 6;
-            let x_cell = (i % width) as f32;
-            let y_cell = (i / width) as f32;
-            let x_tile = (cell.index % 16) as f32;
-            let y_tile = (cell.index / 16) as f32;
+            if cell.should_process(animated) {
+                let vert_offset = cell_offset * 4;
+                let index_offset = cell_offset * 6;
+                let x_cell = (i % width) as f32;
+                let y_cell = (i / width) as f32;
+                let x_tile = (cell.index % 16) as f32;
+                let y_tile = (cell.index / 16) as f32;
+    
+                vertices[vert_offset + 0] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 0, cell.kind);
+                vertices[vert_offset + 1] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 1, cell.kind);
+                vertices[vert_offset + 2] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 2, cell.kind);
+                vertices[vert_offset + 3] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 3, cell.kind);
+    
+                indices[index_offset + 0] = vert_offset as u16 + 0;
+                indices[index_offset + 1] = vert_offset as u16 + 1;
+                indices[index_offset + 2] = vert_offset as u16 + 3;
+                indices[index_offset + 3] = vert_offset as u16 + 1;
+                indices[index_offset + 4] = vert_offset as u16 + 2;
+                indices[index_offset + 5] = vert_offset as u16 + 3;
 
-            vertices[vert_offset + 0] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 0, cell.kind);
-            vertices[vert_offset + 1] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 1, cell.kind);
-            vertices[vert_offset + 2] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 2, cell.kind);
-            vertices[vert_offset + 3] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 3, cell.kind);
-
-            indices[index_offset + 0] = vert_offset as u16 + 0;
-            indices[index_offset + 1] = vert_offset as u16 + 1;
-            indices[index_offset + 2] = vert_offset as u16 + 3;
-            indices[index_offset + 3] = vert_offset as u16 + 1;
-            indices[index_offset + 4] = vert_offset as u16 + 2;
-            indices[index_offset + 5] = vert_offset as u16 + 3;
+                cell_offset += 1;
+            }
         }
 
-        VBO::make(PrimitiveKind::Triangles, &vertices, Some(&indices))
+        vertices.shrink_to_fit();
+        indices.shrink_to_fit();
+
+        let vbo = VBO::make(mode, PrimitiveKind::Triangles, &vertices, Some(&indices));
+
+        (vertices, vbo)
     }
 
     fn build_vertex(map_width: f32, map_height: f32, x_cell: f32, y_cell: f32, x_tile: f32, y_tile: f32, corner_index: usize, kind: TextureKind) -> TextureVertex {
@@ -169,8 +226,8 @@ impl Tileset {
 
         let x = POS[corner_index * 2 + 0] + (x_cell * TILE_SIZE);
         let y = POS[corner_index * 2 + 1] + (y_cell * TILE_SIZE);
-        let u = COORDS[corner_index * 2 + 0] + (x_tile as f32 * TILE_MAG);
-        let v = COORDS[corner_index * 2 + 1] + (y_tile as f32 * TILE_MAG);
+        let u = COORDS[corner_index * 2 + 0] + (x_tile * TILE_MAG);
+        let v = COORDS[corner_index * 2 + 1] + (y_tile * TILE_MAG);
     
         let pos = Vector2::from(proj_mat.transform_point(&Vector3::make(x, y, 0.0)));
         let coord = Vector2::make(u, v) + kind.get_atlas_offset();
@@ -194,13 +251,26 @@ impl Tileset {
         self.height as f32 * TILE_SIZE
     }
 
+    pub fn update(&mut self, elapsed_time: f32) {
+        let curr_frame = (elapsed_time * 4.0) as usize % 4;
+
+        if curr_frame != self.frame_index {
+            for layer in &mut self.layers {
+                layer.update_anim_uvs(curr_frame);
+            }
+
+            self.frame_index = curr_frame;
+        }
+    }
+
     pub fn render(&self) {
         SHADER_TEXTURE.bind();
 
         self.texture.bind(0);
         
         for layer in &self.layers {
-            layer.vbo.draw();
+            layer.base_vbo.draw();
+            layer.anim_vbo.draw();
         }
     }
 }

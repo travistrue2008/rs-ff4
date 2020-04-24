@@ -6,6 +6,7 @@ mod tileset;
 use std::cell::Cell;
 use std::path::Path;
 use std::sync::mpsc::Receiver;
+use std::time::Instant;
 use std::vec;
 
 use glfw::{
@@ -110,16 +111,19 @@ fn main() {
 
     init_gl(&mut window);
 
-    let name = "castle1_b";
     let path = Path::new("./assets/tileset");
-    let map_filename = "castle1_baron_castle_01.cn2";
-    let tileset = tileset::load(path, &map_filename, &name).unwrap();
+    let mut tileset = tileset::load(path, "castle1_baron_castle_01.cn2", "castle1_b").unwrap();
 
     window.set_size(tileset.get_px_width() as i32, tileset.get_px_height() as i32);
+
+    let start_time = Instant::now();
     while !window.should_close() {
+        let elapsed = start_time.elapsed().as_secs_f32();
+
         process_events(&mut window, &events);
         process_frame();
 
+        tileset.update(elapsed);
         tileset.render();
 
         window.swap_buffers();
