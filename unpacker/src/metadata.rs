@@ -38,7 +38,7 @@ impl Header {
             archive_total_size: read_u32(buffer, offset) as usize,
         };
 
-        get_slice(buffer, offset, 0x10);
+        read_slice(buffer, offset, 0x10);
         header
     }
 }
@@ -58,10 +58,10 @@ impl Record {
         let parent_id = read_u32(buffer, offset);
         let info_offset = read_u32(buffer, offset) as usize;
         let info_count = read_u32(buffer, offset) as usize;
-        get_slice(buffer, offset, 0x4);
+        read_slice(buffer, offset, 0x4);
 
         let directory_info_offset = read_u32(buffer, offset) as usize;
-        get_slice(buffer, offset, 0x8);
+        read_slice(buffer, offset, 0x8);
 
         Record {
             id,
@@ -87,7 +87,7 @@ struct Info {
 
 impl Info {
     fn read(buffer: &[u8], offset: &mut usize) -> Info {
-        get_slice(buffer, offset, 0x2);
+        read_slice(buffer, offset, 0x2);
 
         let kind = if read_u16(buffer, offset) == 1 {
             InfoKind::File
@@ -99,11 +99,11 @@ impl Info {
         let filename_length = read_u32(buffer, offset) as usize;
         let file_offset = read_u32(buffer, offset) as usize;
         let file_real_size = read_u32(buffer, offset) as usize;
-        get_slice(buffer, offset, 0x4);
+        read_slice(buffer, offset, 0x4);
 
         let record_id = read_u32(buffer, offset);
         let file_full_size = read_u32(buffer, offset) as usize;
-        let sha_256 = clone_into_array(get_slice(buffer, offset, CHECKSUM_SIZE));
+        let sha_256 = clone_into_array(read_slice(buffer, offset, CHECKSUM_SIZE));
 
         Info {
             record_id,
