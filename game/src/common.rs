@@ -1,6 +1,4 @@
 use byteorder::{ByteOrder, LittleEndian};
-use std::format;
-use std::path::{Path, PathBuf};
 use std::str;
 
 pub fn read_slice<'a>(buffer: &'a [u8], offset: &mut usize, length: usize) -> &'a [u8] {
