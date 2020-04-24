@@ -3,7 +3,7 @@ use std::format;
 use std::path::{Path, PathBuf};
 use std::str;
 
-pub fn get_slice<'a>(buffer: &'a [u8], offset: &mut usize, length: usize) -> &'a [u8] {
+pub fn read_slice<'a>(buffer: &'a [u8], offset: &mut usize, length: usize) -> &'a [u8] {
     let start_index = *offset as usize;
     let end_index = start_index + length;
 
@@ -12,13 +12,13 @@ pub fn get_slice<'a>(buffer: &'a [u8], offset: &mut usize, length: usize) -> &'a
 }
 
 pub fn read_u16(buffer: &[u8], offset: &mut usize) -> u16 {
-    let slice = get_slice(buffer, offset, 2);
+    let slice = read_slice(buffer, offset, 2);
 
     LittleEndian::read_u16(slice)
 }
 
 pub fn read_u32(buffer: &[u8], offset: &mut usize) -> u32 {
-    let slice = get_slice(buffer, offset, 4);
+    let slice = read_slice(buffer, offset, 4);
 
     LittleEndian::read_u32(slice)
 }

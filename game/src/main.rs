@@ -122,35 +122,17 @@ fn main() {
 
     init_gl(&mut window);
 
-    let vbo = VBO::make(PrimitiveKind::TriangleFan, &vec![
-        TextureVertex::make( 1.0,  1.0, 1.0, 0.0),
-        TextureVertex::make(-1.0,  1.0, 0.0, 0.0),
-        TextureVertex::make(-1.0, -1.0, 0.0, 1.0),
-        TextureVertex::make( 1.0, -1.0, 1.0, 1.0),
-    ], None);
+    let name = "castle1_b";
+    let path = Path::new("./assets/tileset");
+    let map_filename = "castle1_baron_castle_01.cn2";
+    let tileset = tileset::load(path, &map_filename, &name).unwrap();
 
-    let image = tim2::load("./assets/tileset/castle1_b_base.tm2").unwrap();
-    let frame = image.get_frame(0);
-    let pixels = frame.to_raw(None);
-    let texture = Texture::make(&pixels, frame.width(), frame.height(), false).unwrap();
-    let tileset = tileset::load("./assets/tileset/castle1_baron_castle_01.cn2").unwrap();
-
-    println!("tileset_dims: <{}, {}>", tileset.width, tileset.height);
-    for i in 0..(tileset.cells.len() / tileset.width) {
-        let start_index = i * tileset.width;
-        let end_index = start_index + tileset.width;
-        let slice = &tileset.cells[start_index..end_index];
-        let indices: Vec::<usize> = slice.to_vec().iter().map(|cell| { cell.v1 }).collect();
-
-        println!("{:?}", &indices);
-    }
-
-    window.set_size(frame.width() as i32, frame.height() as i32);
+    window.set_size(tileset.get_px_width() as i32, tileset.get_px_height() as i32);
     while !window.should_close() {
         process_events(&mut window, &events);
         process_frame();
 
-        draw(&texture, &vbo);
+        tileset.render();
 
         window.swap_buffers();
         glfw.poll_events();

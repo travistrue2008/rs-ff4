@@ -1,51 +1,233 @@
 use crate::common::*;
-use crate::error::Result;
+use crate::error::{Result, Error};
 
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use tim2;
+use tim2::{Frame, Pixel};
 
-#[derive(Debug, Copy, Clone)]
+use gl_toolkit::{
+    SHADER_TEXTURE,
+    PrimitiveKind,
+    Texture,
+    VBO,
+    Vertex,
+    TextureVertex,
+};
+
+use vex::{
+    Matrix,
+    Matrix4,
+    Vector2,
+    Vector3,
+};
+
+const ATLAS_WIDTH: usize = 1024;
+const TEXEL: f32 = 1.0 / ATLAS_WIDTH as f32;
+const TILE_SIZE: f32 = 32.0;
+const TILE_MAG: f32 = TEXEL * TILE_SIZE;
+
+const POS: [f32; 8] = [
+    TILE_SIZE, 0.0,
+    0.0, 0.0,
+    0.0, TILE_SIZE,
+    TILE_SIZE, TILE_SIZE,
+];
+
+const COORDS: [f32; 8] = [
+    TILE_MAG, 0.0,
+    0.0, 0.0,
+    0.0, TILE_MAG,
+    TILE_MAG, TILE_MAG,
+];
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum TextureKind {
+    Base,
+    Var,
+    Anm,
+}
+
+impl TextureKind {
+    fn make(index: usize) -> Result<TextureKind> {
+        match index {
+            0 => Ok(TextureKind::Base),
+            1 => Ok(TextureKind::Var),
+            2 => Ok(TextureKind::Anm),
+            // n => Err(Error::InvalidTilesetIndex(n)),
+            _ => Ok(TextureKind::Anm),
+        }
+    }
+
+    fn get_native(&self) -> usize {
+        match self {
+            TextureKind::Base => 0,
+            TextureKind::Var => 1,
+            TextureKind::Anm => 2,
+        }
+    }
+
+    fn get_suffix(&self) -> &'static str {
+        match self {
+            TextureKind::Base => "base",
+            TextureKind::Var => "var",
+            TextureKind::Anm => "anm",
+        }
+    }
+}
+
 pub struct Cell {
-    pub v1: usize,
-    pub v2: usize,
-    pub v3: usize,
+    index: u8,
+    kind: TextureKind,
 }
 
-#[derive(Debug)]
+pub struct Layer {
+    vbo: VBO,
+    cells: Vec::<Cell>,
+}
+
 pub struct Tileset {
-    pub width: usize,
-    pub height: usize,
-    pub cells: Vec::<Cell>,
+    width: usize,
+    height: usize,
+    layers: Vec::<Layer>,
+    texture: Texture,
 }
 
-pub fn load<P: AsRef<Path>>(path: P) -> Result<Tileset> {
-    let mut offset = 0usize;
-    let mut file = File::open(path)?;
+impl Tileset {
+    fn load(texture: Texture, buffer: &Vec::<u8>) -> Tileset {
+        let mut offset = 0usize;
+        let width = read_u16(&buffer, &mut offset) as usize;
+        let height = read_u16(&buffer, &mut offset) as usize;
+        let cell_count = width * height;
+        let layers = (0..1).map(|_| { /* TODO: change 0..1 to 0..3 */
+            let slice = read_slice(&buffer, &mut offset, cell_count * 2);
+            let cells = (0..(width * height)).map(|e| {
+                Cell {
+                    index: slice[e * 2 + 0],
+                    kind: TextureKind::make(slice[e * 2 + 1] as usize).unwrap(),
+                }
+            }).collect();
+
+            Layer {
+                vbo: Tileset::build_vbo(&cells, width, height),
+                cells,
+            }
+        }).collect();
+
+        Tileset {
+            width,
+            height,
+            layers,
+            texture,
+        }
+    }
+
+    fn build_vbo(cells: &Vec::<Cell>, width: usize, height: usize) -> VBO {
+        let map_width = width as f32 * TILE_SIZE;
+        let map_height = height as f32 * TILE_SIZE;
+        let mut vertices = vec![TextureVertex::new(); cells.len() * 4];
+        let mut indices = vec![0; cells.len() * 6];
+
+        for (i, cell) in cells.iter().enumerate() {
+            let vert_offset = i * 4;
+            let index_offset = i * 6;
+            let x_cell = (i % width) as f32;
+            let y_cell = (i / width) as f32;
+            let x_tile = (cell.index % 16) as f32;
+            let y_tile = (cell.index / 16) as f32;
+
+            vertices[vert_offset + 0] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 0);
+            vertices[vert_offset + 1] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 1);
+            vertices[vert_offset + 2] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 2);
+            vertices[vert_offset + 3] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 3);
+
+            indices[index_offset + 0] = vert_offset as u16 + 0;
+            indices[index_offset + 1] = vert_offset as u16 + 1;
+            indices[index_offset + 2] = vert_offset as u16 + 3;
+            indices[index_offset + 3] = vert_offset as u16 + 1;
+            indices[index_offset + 4] = vert_offset as u16 + 2;
+            indices[index_offset + 5] = vert_offset as u16 + 3;
+        }
+
+        VBO::make(PrimitiveKind::Triangles, &vertices, Some(&indices))
+    }
+
+    fn build_vertex(map_width: f32, map_height: f32, x_cell: f32, y_cell: f32, x_tile: f32, y_tile: f32, corner_index: usize) -> TextureVertex {
+        let proj_mat = Matrix4::ortho(0.0, map_width, 0.0, map_height, 0.0, 1000.0);
+
+        let x = POS[corner_index * 2 + 0] + (x_cell * TILE_SIZE);
+        let y = POS[corner_index * 2 + 1] + (y_cell * TILE_SIZE);
+        let u = COORDS[corner_index * 2 + 0] + (x_tile as f32 * TILE_MAG);
+        let v = COORDS[corner_index * 2 + 1] + (y_tile as f32 * TILE_MAG);
+    
+        let pos = Vector2::from(proj_mat.transform_point(&Vector3::make(x, y, 0.0)));
+        let coord = Vector2::make(u, v);
+    
+        TextureVertex::make_from_parts(pos, coord)
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn get_px_width(&self) -> f32 {
+        self.width as f32 * TILE_SIZE
+    }
+
+    pub fn get_px_height(&self) -> f32 {
+        self.height as f32 * TILE_SIZE
+    }
+
+    pub fn render(&self) {
+        SHADER_TEXTURE.bind();
+
+        self.texture.bind(0);
+        
+        for layer in &self.layers {
+            layer.vbo.draw();
+        }
+    }
+}
+
+fn load_frame<P: AsRef<Path>>(path: P, name: &str, kind: TextureKind) -> Result<Vec::<u8>> {
+    let color_key = Pixel::from(0, 255, 0, 255);
+    let filename = format!("{}_{}.tm2", name, kind.get_suffix());
+    let path = path.as_ref().join(filename);
+
+    let image = tim2::load(path)?;
+    let frame = image.get_frame(0);
+    let pixels = frame.to_raw(Some(color_key));
+
+    Ok(pixels)
+}
+
+fn build_texture<P: AsRef<Path>>(path: P, name: &str) -> Result<Texture> {
+    const TEX_SIZE: usize = 512;
+
+    let base_pixels = load_frame(&path, name, TextureKind::Base)?;
+    let var_pixels = load_frame(&path, name, TextureKind::Var)?;
+    let anm_pixels = load_frame(&path, name, TextureKind::Anm)?;
+    let tex = Texture::new(1024, 1024);
+
+    tex.write(&base_pixels, 0, 0, TEX_SIZE, TEX_SIZE);
+    tex.write(&var_pixels, TEX_SIZE, 0, TEX_SIZE, TEX_SIZE);
+    tex.write(&anm_pixels, 0, TEX_SIZE, TEX_SIZE, TEX_SIZE);
+
+    Ok(tex)
+}
+
+pub fn load<P: AsRef<Path>>(path: P, map_filename: &str, set_name: &str) -> Result<Tileset> {
+    let texture = build_texture(&path, set_name)?;
+    let file_path = path.as_ref().join(map_filename);
+    let mut file = File::open(file_path)?;
     let mut buffer = Vec::new();
 
     file.read_to_end(&mut buffer)?;
 
-    let width = read_u16(&buffer, &mut offset) as usize;
-    let height = read_u16(&buffer, &mut offset) as usize;
-    let mut cells = Vec::with_capacity(width * height);
-
-    for i in 0..(width * height) {
-        let mut temp_offset = 0usize;
-        let start_index = i * 6 + offset;
-        let end_index = start_index + 6;
-        let slice = &buffer[start_index..end_index];
-
-        cells.push(Cell {
-            v1: read_u16(&slice, &mut temp_offset) as usize,
-            v2: read_u16(&slice, &mut temp_offset) as usize,
-            v3: read_u16(&slice, &mut temp_offset) as usize,
-        })
-    }
-
-    Ok(Tileset {
-        width,
-        height,
-        cells,
-    })
+    Ok(Tileset::load(texture, &buffer))
 }

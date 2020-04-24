@@ -434,10 +434,12 @@ dependencies = [
  "gl_toolkit",
  "glfw",
  "image",
+ "lazy_static",
  "rodio",
  "serde",
  "serde_json",
  "tim2",
+ "vex",
 ]
 
 [[package]]
