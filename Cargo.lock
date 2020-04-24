@@ -490,7 +490,7 @@ dependencies = [
 [[package]]
 name = "gl_toolkit"
 version = "0.1.0"
-source = "git+https://github.com/travistrue2008/gl-toolkit-rs#c31f722d649e3cda0379e7fa7326fc7ad3493c70"
+source = "git+https://github.com/travistrue2008/gl-toolkit-rs#31faa250a2bba4f7cf80ad4f39268196f6ba6736"
 dependencies = [
  "gl",
  "lazy_static",
@@ -1838,9 +1838,9 @@ checksum = "078775d0255232fb988e6fccf26ddc9d1ac274299aaedcedce21c6f72cc533ce"
 
 [[package]]
 name = "vex"
-version = "1.0.2"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b0a10f9e530910eef668fbe7efcea940e2b99093e9757b38c940bc6b8174eb5"
+checksum = "9a1d6a654b7633bbe904da318362a8deba7f7651a6fb3c7fae1fe245802850fc"
 
 [[package]]
 name = "want"
