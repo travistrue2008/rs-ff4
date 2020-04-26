@@ -167,6 +167,16 @@ pub struct Trigger {
     upper: TriggerKind,
 }
 
+impl Trigger{
+    pub fn lower(&self) -> TriggerKind {
+        self.lower
+    }
+
+    pub fn upper(&self) -> TriggerKind {
+        self.upper
+    }
+}
+
 pub struct Layer {
     base_vbo: VBO,
     anim_vbo: VBO,
