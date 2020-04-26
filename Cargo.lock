@@ -492,7 +492,7 @@ dependencies = [
 [[package]]
 name = "gl_toolkit"
 version = "0.1.0"
-source = "git+https://github.com/travistrue2008/gl-toolkit-rs#b634ada4bd64e2c232acec563a5baa64d6e07b52"
+source = "git+https://github.com/travistrue2008/gl-toolkit-rs#1143220495870ca0a6e4ce5d0a20ee99bb30e4a1"
 dependencies = [
  "gl",
  "lazy_static",
