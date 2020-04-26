@@ -9,6 +9,7 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum Error {
     GlToolkit(gl_toolkit::Error),
     InvalidTilesetIndex(usize),
+    InvalidTilesetTrigger(u8),
     Io(io::Error),
     Tim2(tim2::Error),
 }

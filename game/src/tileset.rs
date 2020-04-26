@@ -1,5 +1,5 @@
 use crate::common::*;
-use crate::error::Result;
+use crate::error::{Result, Error};
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -57,12 +57,11 @@ impl TextureKind {
             0 => Ok(TextureKind::Base),
             1 => Ok(TextureKind::Var),
             2 => Ok(TextureKind::Anm),
-            // n => Err(Error::InvalidTilesetIndex(n)),
-            _ => Ok(TextureKind::Anm),
+            n => Err(Error::InvalidTilesetIndex(n)),
         }
     }
 
-    fn get_native(&self) -> usize {
+    fn get_raw(&self) -> usize {
         match self {
             TextureKind::Base => 0,
             TextureKind::Var => 1,
@@ -89,6 +88,65 @@ impl TextureKind {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum TriggerKind {
+    Passable,
+    Blocker,
+    UpperLowerDelta,
+    LowerUpperDelta,
+    Hidden,
+    Bridge,
+    Damage,
+    BottomTransparent,
+    BottomHidden,
+    Unknown7,
+    Unknown12,
+    Unknown13,
+    Treasure(u8),
+    Exit(u8),
+}
+
+impl TriggerKind {
+    fn new(v: u8) -> Result<TriggerKind> {
+        match v {
+            0x00 => Ok(TriggerKind::Passable),
+            0x01 => Ok(TriggerKind::Blocker),
+            0x02 => Ok(TriggerKind::UpperLowerDelta),
+            0x03 => Ok(TriggerKind::LowerUpperDelta),
+            0x04 => Ok(TriggerKind::Hidden),
+            0x05 => Ok(TriggerKind::Bridge),
+            0x06 => Ok(TriggerKind::Damage),
+            0x10 => Ok(TriggerKind::BottomTransparent),
+            0x11 => Ok(TriggerKind::BottomHidden),
+            0x07=> Ok(TriggerKind::Unknown7),
+            0x12 => Ok(TriggerKind::Unknown12),
+            0x13 => Ok(TriggerKind::Unknown13),
+            0x20..=0x3F => Ok(TriggerKind::Treasure(v & 0x3F)),
+            0x40..=0x5F => Ok(TriggerKind::Exit(v & 0x3F)),
+            n => Err(Error::InvalidTilesetTrigger(n)),
+        }
+    }
+
+    pub fn get_raw(&self) -> u8 {
+        match self {
+            TriggerKind::Passable => 0x00,
+            TriggerKind::Blocker => 0x01,
+            TriggerKind::UpperLowerDelta => 0x02,
+            TriggerKind::LowerUpperDelta => 0x03,
+            TriggerKind::Hidden => 0x04,
+            TriggerKind::Bridge => 0x05,
+            TriggerKind::Damage => 0x06,
+            TriggerKind::BottomTransparent => 0x10,
+            TriggerKind::BottomHidden => 0x11,
+            TriggerKind::Unknown7 => 0x07,
+            TriggerKind::Unknown12 => 0x12,
+            TriggerKind::Unknown13 => 0x13,
+            TriggerKind::Treasure(index) => 0x20 | *index,
+            TriggerKind::Exit(index) => 0x40 | *index,
+        }
+    }
+}
+
 pub struct Cell {
     index: u8,
     kind: TextureKind,
@@ -104,6 +162,11 @@ impl Cell {
     }
 }
 
+pub struct Trigger {
+    lower: TriggerKind,
+    upper: TriggerKind,
+}
+
 pub struct Layer {
     base_vbo: VBO,
     anim_vbo: VBO,
@@ -112,7 +175,7 @@ pub struct Layer {
 }
 
 impl Layer {
-    fn update_anim_uvs(&mut self, frame_index: usize) {
+    fn animate(&mut self, frame_index: usize) {
         let mut cell_offset = 0;
 
         for cell in self.cells.iter() {
@@ -136,8 +199,9 @@ pub struct Tileset {
     width: usize,
     height: usize,
     frame_index: usize,
-    layers: Vec::<Layer>,
     texture: Texture,
+    layers: Vec::<Layer>,
+    triggers: Vec::<Trigger>,
 }
 
 impl Tileset {
@@ -145,10 +209,36 @@ impl Tileset {
         let mut offset = 0usize;
         let width = read_u16(&buffer, &mut offset) as usize;
         let height = read_u16(&buffer, &mut offset) as usize;
+
+        Tileset {
+            frame_index: 0,
+            width,
+            height,
+            texture,
+            layers: Tileset::build_layers(buffer, &mut offset, width, height),
+            triggers: Tileset::build_triggers(buffer, &mut offset, width, height),
+        }
+    }
+
+    fn build_triggers(buffer: &Vec::<u8>, offset: &mut usize, width: usize, height: usize) -> Vec::<Trigger> {
         let cell_count = width * height;
-        let layers = (0..2).map(|_| { /* TODO: figure out what Layer 3 does... */
-            let slice = read_slice(&buffer, &mut offset, cell_count * 2);
-            let cells = (0..(width * height)).map(|e| {
+        let slice = read_slice(&buffer, offset, cell_count * 2);
+
+        (0..cell_count)
+            .map(|i| Ok(Trigger {
+                lower: TriggerKind::new(slice[i * 2 + 0])?,
+                upper: TriggerKind::new(slice[i * 2 + 1])?,
+            }))
+            .filter_map(Result::ok)
+            .collect()
+    }
+
+    fn build_layers(buffer: &Vec::<u8>, offset: &mut usize, width: usize, height: usize) -> Vec::<Layer> {
+        let cell_count = width * height;
+
+        (0..2).map(|_| {
+            let slice = read_slice(&buffer, offset, cell_count * 2);
+            let cells = (0..cell_count).map(|e| {
                 Cell {
                     index: slice[e * 2 + 0],
                     kind: TextureKind::make(slice[e * 2 + 1] as usize).unwrap(),
@@ -164,59 +254,55 @@ impl Tileset {
                 anim_verts,
                 cells,
             }
-        }).collect();
-
-        Tileset {
-            frame_index: 0,
-            width,
-            height,
-            layers,
-            texture,
-        }
+        }).collect()
     }
 
     fn build_vbo(width: usize, height: usize, cells: &Vec::<Cell>, animated: bool) -> (Vec::<TextureVertex>, VBO) {
         let map_width = width as f32 * TILE_SIZE;
         let map_height = height as f32 * TILE_SIZE;
-        let mut vertices = vec![TextureVertex::new(); cells.len() * 4];
-        let mut indices = vec![0; cells.len() * 6];
-        let mut cell_offset = 0;
+        let mut vertices = Vec::with_capacity(cells.len() * 4);
+        let mut indices = Vec::with_capacity(cells.len() * 6);
+        let mut offset = 0;
 
         let mode = if animated {
-            BufferMode::StaticDraw
-        } else {
             BufferMode::DynamicDraw
+        } else {
+            BufferMode::StaticDraw
         };
 
         for (i, cell) in cells.iter().enumerate() {
             if cell.should_process(animated) {
-                let vert_offset = cell_offset * 4;
-                let index_offset = cell_offset * 6;
+                let vert_offset = offset as u16 * 4;
                 let x_cell = (i % width) as f32;
                 let y_cell = (i / width) as f32;
                 let x_tile = (cell.index % 16) as f32;
                 let y_tile = (cell.index / 16) as f32;
-    
-                vertices[vert_offset + 0] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 0, cell.kind);
-                vertices[vert_offset + 1] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 1, cell.kind);
-                vertices[vert_offset + 2] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 2, cell.kind);
-                vertices[vert_offset + 3] = Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 3, cell.kind);
-    
-                indices[index_offset + 0] = vert_offset as u16 + 0;
-                indices[index_offset + 1] = vert_offset as u16 + 1;
-                indices[index_offset + 2] = vert_offset as u16 + 3;
-                indices[index_offset + 3] = vert_offset as u16 + 1;
-                indices[index_offset + 4] = vert_offset as u16 + 2;
-                indices[index_offset + 5] = vert_offset as u16 + 3;
 
-                cell_offset += 1;
+                vertices.push(Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 0, cell.kind));
+                vertices.push(Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 1, cell.kind));
+                vertices.push(Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 2, cell.kind));
+                vertices.push(Tileset::build_vertex(map_width, map_height, x_cell, y_cell, x_tile, y_tile, 3, cell.kind));
+
+                indices.push(vert_offset + 0);
+                indices.push(vert_offset + 1);
+                indices.push(vert_offset + 3);
+                indices.push(vert_offset + 1);
+                indices.push(vert_offset + 2);
+                indices.push(vert_offset + 3);
+
+                offset += 1;
             }
         }
 
         vertices.shrink_to_fit();
         indices.shrink_to_fit();
 
-        let vbo = VBO::make(mode, PrimitiveKind::Triangles, &vertices, Some(&indices));
+        if vertices.len() == 0 {
+            vertices = vec![TextureVertex::new(); 4];
+        }
+
+        let indices = if indices.len() > 0 { Some(&indices) } else { None };
+        let vbo = VBO::make(mode, PrimitiveKind::Triangles, &vertices, indices);
 
         (vertices, vbo)
     }
@@ -243,6 +329,10 @@ impl Tileset {
         self.height
     }
 
+    pub fn triggers(&self) -> &Vec::<Trigger> {
+        &self.triggers
+    }
+
     pub fn get_px_width(&self) -> f32 {
         self.width as f32 * TILE_SIZE
     }
@@ -256,7 +346,7 @@ impl Tileset {
 
         if curr_frame != self.frame_index {
             for layer in &mut self.layers {
-                layer.update_anim_uvs(curr_frame);
+                layer.animate(curr_frame);
             }
 
             self.frame_index = curr_frame;

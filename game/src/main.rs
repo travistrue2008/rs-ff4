@@ -1,5 +1,5 @@
 mod common;
-mod defs;
+// mod defs;
 mod error;
 mod tileset;
 
