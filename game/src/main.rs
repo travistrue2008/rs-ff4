@@ -1,13 +1,14 @@
 mod common;
-// mod defs;
 mod error;
-mod tileset;
+mod tilemap;
 
+use lazy_static::lazy_static;
 use std::cell::Cell;
 use std::path::Path;
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
 use std::vec;
+use vex::Matrix4;
 
 use glfw::{
 	Action,
@@ -20,9 +21,9 @@ use glfw::{
 	WindowMode,
 };
 
-// fn initDefs () {
-// 	let definitions: defs::Definitions = defs::load();
-// }
+lazy_static! {
+    static ref proj_mat: Matrix4 = Matrix4::ortho(0.0, 480.0, 0.0, 272.0, 0.0, 1000.0);
+}
 
 fn create_icon() -> Vec<glfw::PixelImage> {
     let icon_path = Path::new("./assets/icon.png");
@@ -60,7 +61,7 @@ fn init_glfw() -> Glfw {
 
 fn init_window(glfw: &Glfw) -> (Window, Receiver<(f64, WindowEvent)>) {
     let (mut window, events) = glfw
-        .create_window(640, 480, "Final Fantasy IV", WindowMode::Windowed)
+        .create_window(480, 272, "Final Fantasy IV", WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.make_current();
@@ -112,9 +113,7 @@ fn main() {
     init_gl(&mut window);
 
     let path = Path::new("./assets/tileset");
-    let mut tileset = tileset::load(path, "castle1_baron_castle_01.cn2", "castle1_b").unwrap();
-
-    window.set_size(tileset.get_px_width() as i32, tileset.get_px_height() as i32);
+    let mut tilemap = tilemap::load(path, "castle1_baron_castle_01.cn2", "castle1_b").unwrap();
 
     let start_time = Instant::now();
     while !window.should_close() {
@@ -123,8 +122,8 @@ fn main() {
         process_events(&mut window, &events);
         process_frame();
 
-        tileset.update(elapsed);
-        tileset.render();
+        tilemap.update(elapsed);
+        tilemap.render();
 
         window.swap_buffers();
         glfw.poll_events();

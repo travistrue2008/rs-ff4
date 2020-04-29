@@ -8,8 +8,7 @@ pub type Result<T> = result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     GlToolkit(gl_toolkit::Error),
-    InvalidTilesetIndex(usize),
-    InvalidTilesetTrigger(u8),
+    InvalidTilesetIndex(u8),
     Io(io::Error),
     Tim2(tim2::Error),
 }
