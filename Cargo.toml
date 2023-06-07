@@ -1,6 +1,0 @@
-[workspace]
-members = [
-	"game",
-	"unpacker",
-	"scraper_bestiary",
-]

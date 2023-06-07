@@ -1,131 +1,166 @@
 mod common;
 mod error;
+mod graphics;
 mod tilemap;
 
+use cgmath::Matrix4;
 use lazy_static::lazy_static;
-use std::cell::Cell;
 use std::path::Path;
-use std::sync::mpsc::Receiver;
 use std::time::Instant;
-use std::vec;
-use vex::Matrix4;
+use tilemap::Tilemap;
 
-use glfw::{
-	Action,
-	Context,
-	Key,
-	Glfw,
-	Window,
-	WindowEvent,
-	WindowHint,
-	WindowMode,
+use crate::graphics::{
+	Core as GraphicsCore,
 };
 
-lazy_static! {
-    static ref proj_mat: Matrix4 = Matrix4::ortho(0.0, 480.0, 0.0, 272.0, 0.0, 1000.0);
+use winit::{
+	event::*,
+	event_loop::{ControlFlow, EventLoop},
+	window::{Icon, Window, WindowBuilder},
+};
+
+const WINDOW_SIZE: winit::dpi::LogicalSize<f64> = winit::dpi::LogicalSize::new(480.0, 272.0);
+
+// lazy_static! {
+// 	static ref proj_mat: Matrix4<f32> = cgmath::ortho::<f32>(0.0, 480.0, 0.0, 272.0, 0.0, 1000.0);
+// }
+
+fn create_icon() -> Icon {
+	let path = Path::new("./assets/icon.png");
+
+	let image = image::open(path)
+		.expect("Failed to load icon")
+		.to_rgba8();
+
+	let (width, height) = image.dimensions();
+	let buffer = image.into_raw();
+
+	Icon::from_rgba(buffer, width, height).unwrap()
 }
 
-fn create_icon() -> Vec<glfw::PixelImage> {
-    let icon_path = Path::new("./assets/icon.png");
-    let icon_image = image::open(icon_path).unwrap().to_rgba();
-    let mut icon_pixels = Vec::new();
-
-    for pixel in icon_image.pixels() {
-        icon_pixels.push(
-            (pixel[3] as u32) << 24
-                | (pixel[2] as u32) << 16
-                | (pixel[1] as u32) << 8
-                | (pixel[0] as u32),
-        );
-    }
-
-    vec![glfw::PixelImage {
-        width: icon_image.width(),
-        height: icon_image.height(),
-        pixels: icon_pixels,
-    }]
+pub struct App {
+	graphics_core: GraphicsCore,
+	level: Tilemap,
 }
 
-fn init_glfw() -> Glfw {
-    let mut glfw = glfw::init(Some(glfw::Callback {
-		f: error_callback,
-		data: Cell::new(0),
-    })).unwrap();
+impl App {
+	async fn new(window: &Window) -> Self {
+		let path = Path::new("./assets/tilemap");
+		let graphics_core = GraphicsCore::new(window).await;
 
-    glfw.window_hint(WindowHint::ContextVersion(4, 1));
-    glfw.window_hint(WindowHint::OpenGlForwardCompat(true));
-    glfw.window_hint(WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+		let level = tilemap::load(
+			&graphics_core,
+			path,
+			"castle1_baron_castle_01.cn2",
+			"castle1_b",
+		).unwrap();
 
-    glfw
+		Self {
+			graphics_core,
+			level,
+		}
+	}
+
+	fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
+		self.graphics_core.resize(size);
+	}
+
+	fn input(&mut self, _event: &WindowEvent) -> bool {
+		false
+	}
+
+	fn update(&mut self) {
+	}
+
+	fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+		let output = self.graphics_core.surface().get_current_texture()?;
+		let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+		let mut encoder = self.graphics_core.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
+			label: Some("Render Encoder"),
+		});
+
+		{
+			let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+				label: Some("Render Pass"),
+				depth_stencil_attachment: None,
+				color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+					view: &view,
+					resolve_target: None,
+					ops: wgpu::Operations {
+						store: true,
+						load: wgpu::LoadOp::Load,
+					},
+				})],
+			});
+
+			render_pass.set_pipeline(&self.graphics_core.pipeline());
+			self.level.render(&mut render_pass);
+		}
+	
+		self.graphics_core.queue().submit(std::iter::once(encoder.finish()));
+		output.present();
+	
+		Ok(())
+	}
 }
 
-fn init_window(glfw: &Glfw) -> (Window, Receiver<(f64, WindowEvent)>) {
-    let (mut window, events) = glfw
-        .create_window(480, 272, "Final Fantasy IV", WindowMode::Windowed)
-        .expect("Failed to create GLFW window.");
+#[tokio::main]
+async fn main() {
+	env_logger::init();
 
-    window.make_current();
-    window.set_key_polling(true);
-    window.set_framebuffer_size_polling(true);
-    window.set_icon_from_pixels(create_icon());
+	let start_time = Instant::now();
+	let event_loop = EventLoop::new();
 
-    (window, events)
-}
+	let window = WindowBuilder::new()
+	.with_title("Final Fantasy IV")
+		.with_window_icon(Some(create_icon()))
+		.with_resizable(false)
+		.with_inner_size(WINDOW_SIZE)
+		.build(&event_loop).unwrap();
 
-fn init_gl(window: &mut Window) {
-    gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
+	let mut screen_size = winit::dpi::PhysicalSize::new(0, 0);
+	let mut app = App::new(&window).await;
 
-    unsafe {
-        gl::Enable(gl::BLEND);
-		gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-		gl::ActiveTexture(gl::TEXTURE0);
-		gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-    }
-}
+	event_loop.run(move |event, _, control_flow| match event {
+		Event::WindowEvent {
+			ref event,
+			window_id,
+		} if window_id == window.id() => if !app.input(event) {
+			match event {
+				WindowEvent::CloseRequested => {
+					*control_flow = ControlFlow::Exit
+				},
+				WindowEvent::Resized(physical_size) => {
+					screen_size = *physical_size;
 
-fn error_callback(_: glfw::Error, description: String, error_count: &Cell<usize>) {
-	println!("GLFW error ({}): {}", error_count.get(), description);
-	error_count.set(error_count.get() + 1);
-}
+					app.resize(screen_size);
+				},
+				WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+					screen_size = **new_inner_size;
 
-fn process_events(window: &mut Window, events: &Receiver<(f64, WindowEvent)>) {
-    for (_, event) in glfw::flush_messages(&events) {
-        match event {
-            WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
-            WindowEvent::FramebufferSize(width, height) => unsafe {
-                gl::Viewport(0, 0, width, height);
-            },
-            _ => {}
-        }
-    }
-}
+					app.resize(screen_size);
+				},
+				_ => {},
+			}
+		},
+		Event::RedrawRequested(window_id) if window_id == window.id() => {
+			let elapsed = start_time.elapsed().as_secs_f32();
 
-fn process_frame() {
-    unsafe {
-        gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-    }
-}
+			println!("elapsed: {}", elapsed);
 
-fn main() {
-    let mut glfw = init_glfw();
-    let (mut window, events) = init_window(&glfw);
+			app.update();
 
-    init_gl(&mut window);
-
-    let path = Path::new("./assets/tileset");
-    let mut tilemap = tilemap::load(path, "castle1_baron_castle_01.cn2", "castle1_b").unwrap();
-
-    let start_time = Instant::now();
-    while !window.should_close() {
-        let elapsed = start_time.elapsed().as_secs_f32();
-
-        process_events(&mut window, &events);
-        process_frame();
-
-        tilemap.update(elapsed);
-        tilemap.render();
-
-        window.swap_buffers();
-        glfw.poll_events();
-    }
+			match app.render() {
+				Ok(_) => {}
+				Err(wgpu::SurfaceError::Lost) => app.resize(screen_size),
+				Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+				Err(e) => eprintln!("{:?}", e),
+			};
+		},
+		Event::MainEventsCleared => {
+			window.request_redraw();
+		},
+		_ => {},
+	});
 }

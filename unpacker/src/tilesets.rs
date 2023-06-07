@@ -144,6 +144,11 @@ pub fn process<P: AsRef<Path>>(input_path: P, output_path: P, name: &str) -> Res
     let output_filename = format!("tilemap_{}.png", name);
     let output_path = output_path.as_ref().join(&output_filename);
     let input_path = input_path.as_ref().join("output/data");
+
+    println!("output_filename: {}", output_filename);
+    println!("output_path: {:#?}", output_path);
+    println!("input_path: {:#?}", input_path);
+
     let items = fs::read_dir(&input_path)?;
     let dirs = filter_directories(&input_path, items);
     let tiles = build_tile_map(name, &dirs)?;
