@@ -3,8 +3,6 @@ mod error;
 mod graphics;
 mod tilemap;
 
-use cgmath::Matrix4;
-use lazy_static::lazy_static;
 use std::path::Path;
 use std::time::Instant;
 use tilemap::Tilemap;
@@ -19,11 +17,15 @@ use winit::{
 	window::{Icon, Window, WindowBuilder},
 };
 
-const WINDOW_SIZE: winit::dpi::LogicalSize<f64> = winit::dpi::LogicalSize::new(480.0, 272.0);
+const WINDOW_SIZE: winit::dpi::LogicalSize<f64> =
+	winit::dpi::LogicalSize::new(480.0, 272.0);
 
-// lazy_static! {
-// 	static ref proj_mat: Matrix4<f32> = cgmath::ortho::<f32>(0.0, 480.0, 0.0, 272.0, 0.0, 1000.0);
-// }
+const CLEAR_COLOR: wgpu::Color = wgpu::Color {
+	r: 0.1,
+	g: 0.2,
+	b: 0.3,
+	a: 1.0,
+};
 
 fn create_icon() -> Icon {
 	let path = Path::new("./assets/icon.png");
@@ -89,12 +91,12 @@ impl App {
 					resolve_target: None,
 					ops: wgpu::Operations {
 						store: true,
-						load: wgpu::LoadOp::Load,
+						load: wgpu::LoadOp::Clear(CLEAR_COLOR),
 					},
 				})],
 			});
 
-			render_pass.set_pipeline(&self.graphics_core.pipeline());
+			render_pass.set_pipeline(self.graphics_core.pipeline());
 			self.level.render(&mut render_pass);
 		}
 	
@@ -113,12 +115,13 @@ async fn main() {
 	let event_loop = EventLoop::new();
 
 	let window = WindowBuilder::new()
-	.with_title("Final Fantasy IV")
+		.with_title("Final Fantasy IV")
 		.with_window_icon(Some(create_icon()))
 		.with_resizable(false)
 		.with_inner_size(WINDOW_SIZE)
 		.build(&event_loop).unwrap();
 
+	let mut last_time = 0f32;
 	let mut screen_size = winit::dpi::PhysicalSize::new(0, 0);
 	let mut app = App::new(&window).await;
 
@@ -145,9 +148,11 @@ async fn main() {
 			}
 		},
 		Event::RedrawRequested(window_id) if window_id == window.id() => {
-			let elapsed = start_time.elapsed().as_secs_f32();
+			let elapsed_time = start_time.elapsed().as_secs_f32();
+			let frame_time = elapsed_time - last_time;
 
-			println!("elapsed: {}", elapsed);
+			println!("frame_time: {}", frame_time);
+			last_time = elapsed_time;
 
 			app.update();
 

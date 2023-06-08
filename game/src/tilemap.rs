@@ -20,6 +20,8 @@ const TEXEL: f32 = 1.0 / ATLAS_WIDTH as f32;
 const TILE_SIZE: f32 = 32.0;
 const TILE_MAG: f32 = TEXEL * TILE_SIZE;
 
+const TILE_INDEX_OFFSETS: [u16; 6] = [0, 1, 2, 0, 2, 3];
+
 const POS: [Vector2<f32>; 4] = [
 	Vector2 { x: TILE_SIZE, y: 0.0 },
 	Vector2 { x: 0.0, y: 0.0 },
@@ -33,44 +35,6 @@ const UV: [Vector2<f32>; 4] = [
 	Vector2 { x: 0.0, y: TILE_MAG },
 	Vector2 { x: TILE_MAG, y: TILE_MAG },
 ];
-
-pub type Tile = [Layer; 2];
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum TileKind {
-	Base,
-	Var,
-	Anm,
-}
-
-impl TileKind {
-	fn new(index: u8) -> Result<TileKind> {
-		match index {
-			0 => Ok(TileKind::Base),
-			1 => Ok(TileKind::Var),
-			2 => Ok(TileKind::Anm),
-			n => Err(Error::InvalidTilesetIndex(n)),
-		}
-	}
-
-	fn get_suffix(&self) -> &'static str {
-		match self {
-			TileKind::Base => "base",
-			TileKind::Var => "var",
-			TileKind::Anm => "anm",
-		}
-	}
-
-	fn get_atlas_offset(&self) -> Vector2<f32> {
-		let mag = TEXTURE_SIZE as f32 * TEXEL;
-
-		match self {
-			TileKind::Base => Vector2::new(0.0, 0.0),
-			TileKind::Var => Vector2::new(mag, 0.0),
-			TileKind::Anm => Vector2::new(0.0, mag),
-		}
-	}
-}
 
 #[derive(Copy, Clone, Debug)]
 pub enum TriggerKind {
@@ -114,6 +78,44 @@ pub struct Layer {
 	index: u8,
 }
 
+pub type Tile = [Layer; 2];
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum TileKind {
+	Base,
+	Var,
+	Anm,
+}
+
+impl TileKind {
+	fn new(index: u8) -> Result<TileKind> {
+		match index {
+			0 => Ok(TileKind::Base),
+			1 => Ok(TileKind::Var),
+			2 => Ok(TileKind::Anm),
+			n => Err(Error::InvalidTilesetIndex(n)),
+		}
+	}
+
+	fn get_suffix(&self) -> &'static str {
+		match self {
+			TileKind::Base => "base",
+			TileKind::Var => "var",
+			TileKind::Anm => "anm",
+		}
+	}
+
+	fn get_atlas_offset(&self) -> Vector2<f32> {
+		let mag = TEXTURE_SIZE as f32 * TEXEL;
+
+		match self {
+			TileKind::Base => Vector2::new(0.0, 0.0),
+			TileKind::Var => Vector2::new(mag, 0.0),
+			TileKind::Anm => Vector2::new(0.0, mag),
+		}
+	}
+}
+
 pub struct Tilemap {
 	width: u32,
 	height: u32,
@@ -126,6 +128,25 @@ pub struct Tilemap {
 	anim_mesh: Option<Mesh>,
 }
 
+/*
+  TILEMAP STATS:
+  - width: 36
+  - height: 44
+  - tiles: 1584
+
+  TARGET STATS (BASE MESH):
+  - vertices:
+    - per layer: 6336
+	- max for both layers: 12672
+  - indices:
+    - per layer: 9504
+	- max for both layers: 19008
+
+  ACTUAL STATS (BASE MESH):
+  - vertices: 6336
+  - indices: 9504
+ */
+
 impl Tilemap {
 	fn load(core: &GraphicsCore, texture: Texture, buffer: &Vec::<u8>) -> Tilemap {
 		let mut offset = 0usize;
@@ -134,9 +155,6 @@ impl Tilemap {
 		let buffer_length = (width * height * 6) as usize;
 		let buffer = read_slice(&buffer, &mut offset, buffer_length);
 		let texture_bind_group = texture.create_bind_group(core.device(), core.layout());
-
-		println!("dims<{}, {}>", width, height);
-
 		let tiles = Tilemap::build_tiles(&buffer, width, height);
 		let (base_mesh, _) = Tilemap::build_mesh(&core, width, &tiles, false);
 		let (anim_mesh, anim_verts) = Tilemap::build_mesh(core, width, &tiles, true);
@@ -159,6 +177,9 @@ impl Tilemap {
 		let upper_offset = count * 2;
 		let trigger_offset = upper_offset * 2;
 
+		println!("dims<{}, {}>", width, height);
+		println!("count: {}", count);
+
 		(0..count).map(|i| [
 			Layer {
 				kind: TileKind::new(buffer[i * 2 + 1]).unwrap(),
@@ -176,10 +197,14 @@ impl Tilemap {
 	fn build_mesh(core: &GraphicsCore, width: u32, tiles: &Vec::<Tile>, animated: bool) -> (Option<Mesh>, Vec<TextureVertex>) {
 		let build = |index| Tilemap::build_vertices(width, tiles, index, animated);
 		let vertices = [&build(0)[..], &build(1)[..]].concat();
+
+		println!("vertices: {}", vertices.len());
 	
 		let mesh = if vertices.len() > 0 {
-			let indices = Tilemap::build_indices(vertices.len() as u16);
+			let indices = Tilemap::build_indices(tiles.len());
 			let mesh = Mesh::make(core.device(), &vertices, Some(&indices));
+
+			println!("indices: {}", indices.len());
 
 			Some(mesh)
 		} else {
@@ -189,14 +214,10 @@ impl Tilemap {
 		(mesh, vertices)
 	}
 
-	fn build_indices(count: u16) -> Vec<u16> {
-		println!("count: {}", count);
-
-		let indices = vec![0u16, 1, 2, 0, 2, 3];
-
+	fn build_indices(count: usize) -> Vec<u16> {
 		(0..count).map(|i| {
-			let offset = i * 6;
-			let result: Vec::<u16> = indices.iter().map(|e| *e + offset).collect();
+			let offset = (i * 4) as u16;
+			let result = TILE_INDEX_OFFSETS.map(|e| e + offset);
 
 			result
 		})

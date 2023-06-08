@@ -29,7 +29,7 @@ impl Core {
 	async fn build_adapter(instance: &Instance, surface: &Surface) -> Adapter {
 		instance.request_adapter(
 			&RequestAdapterOptions {
-				power_preference: PowerPreference::default(),
+				power_preference: PowerPreference::HighPerformance,
 				compatible_surface: Some(&surface),
 				force_fallback_adapter: false,
 			},
@@ -109,6 +109,8 @@ impl Core {
 		let config = Self::build_surface_config(window_size, &surface, &adapter, &device);
 		let layout = Self::build_textured_bind_group(&device);
 		let pipeline = pipeline::build(&device, &config, &layout);
+
+		println!("adapter info: {:#?}", adapter.get_info());
 
 		Self {
 			config,
