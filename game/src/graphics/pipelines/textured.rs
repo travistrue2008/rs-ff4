@@ -73,12 +73,12 @@ pub fn build(device: &Device, config: &SurfaceConfiguration) -> RenderPipeline {
 			entry_point: "fs_main",
 			targets: &[Some(ColorTargetState {
 				format: config.format,
-				blend: Some(BlendState::REPLACE),
+				blend: Some(BlendState::ALPHA_BLENDING),
 				write_mask: ColorWrites::ALL,
 			})],
 		}),
 		primitive: PrimitiveState {
-			topology: PrimitiveTopology::TriangleStrip,
+			topology: PrimitiveTopology::TriangleList,
 			strip_index_format: None,
 			front_face: FrontFace::Ccw,
 			cull_mode: Some(Face::Back),

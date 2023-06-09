@@ -58,7 +58,7 @@ impl Camera {
 	}
 
 	pub fn ortho(&mut self, width: f32, height: f32) {
-		self.proj_matrix = cgmath::ortho(0.0, width, height, 0.0, 0.0, 1000.0);
+		self.proj_matrix = cgmath::ortho(0.0, width, height, 0.0, -1000.0, 1000.0);
 		self.compute();
 	}
 

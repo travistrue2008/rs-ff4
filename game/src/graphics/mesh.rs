@@ -1,17 +1,22 @@
-use bytemuck::*;
 use wgpu::*;
 use wgpu::util::DeviceExt;
 use super::vertex::Vertex;
 
-pub struct Mesh {
+pub struct Mesh<TVertex: Vertex> {
 	index_count: u32,
 	vertex_count: u32,
 	index_buffer: Option<Buffer>,
 	vertex_buffer: Buffer,
+	vertices: Option<Vec<TVertex>>,
 }
 
-impl Mesh {
-	pub fn make<T: Vertex + Pod + Zeroable>(device: &Device, vertices: &Vec::<T>, indices: Option<&Vec::<u16>>) -> Mesh {
+impl<TVertex: Vertex> Mesh<TVertex> {
+	pub fn make(
+		device: &Device,
+		vertices: &Vec::<TVertex>,
+		indices: Option<&Vec::<u16>>,
+		store_vertices: bool,
+	) -> Mesh<TVertex> {
 		let index_count = match indices {
 			Some(indices) => indices.len() as u32,
 			None => 0,
@@ -38,11 +43,18 @@ impl Mesh {
 			}
 		);
 
+		let verts = if store_vertices {
+			Some(vertices.clone())
+		} else {
+			None
+		};
+
 		Mesh {
 			index_count,
 			vertex_count: vertices.len() as u32,
 			index_buffer,
 			vertex_buffer,
+			vertices: verts,
 		}
 	}
 
@@ -58,5 +70,13 @@ impl Mesh {
 				render_pass.draw(0..self.vertex_count, 0..1);
 			},
 		}
+	}
+
+	pub fn vertices(&self) -> &Option<Vec<TVertex>> {
+		&self.vertices
+	}
+
+	pub fn vertices_mut(&mut self) -> &Option<Vec<TVertex>> {
+		&self.vertices
 	}
 }

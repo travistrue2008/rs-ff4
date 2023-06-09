@@ -1,6 +1,6 @@
 use bytemuck::*;
 
-pub trait Vertex {
+pub trait Vertex: Pod + Zeroable {
 	fn layout() -> wgpu::VertexBufferLayout<'static>;
 }
 

@@ -7,6 +7,7 @@ use wgpu::*;
 
 use crate::common::*;
 use crate::error::{Result, Error};
+
 use crate::graphics::{
 	Camera,
 	Core as GraphicsCore,
@@ -20,7 +21,6 @@ const ATLAS_WIDTH: u32 = 1024;
 const TEXEL: f32 = 1.0 / ATLAS_WIDTH as f32;
 const TILE_SIZE: f32 = 32.0;
 const TILE_MAG: f32 = TEXEL * TILE_SIZE;
-
 const TILE_INDEX_OFFSETS: [u16; 6] = [0, 1, 2, 0, 2, 3];
 
 const POS: [Vector2<f32>; 4] = [
@@ -38,7 +38,7 @@ const UV: [Vector2<f32>; 4] = [
 ];
 
 #[derive(Copy, Clone, Debug)]
-pub enum TriggerKind {
+enum TriggerKind {
 	Passable,
 	Blocker,
 	UpperLowerDelta,
@@ -73,16 +73,16 @@ impl TriggerKind {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct Layer {
+struct Layer {
 	kind: TileKind,
 	trigger: TriggerKind,
 	index: u8,
 }
 
-pub type Tile = [Layer; 2];
+type Tile = [Layer; 2];
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum TileKind {
+enum TileKind {
 	Base,
 	Var,
 	Anm,
@@ -122,30 +122,9 @@ pub struct Tilemap {
 	height: u32,
 	frame_index: u32,
 	texture: Texture,
-	tiles: Vec::<Tile>,
-	anim_verts: Vec::<TextureVertex>,
-	base_mesh: Option<Mesh>,
-	anim_mesh: Option<Mesh>,
+	tiles: Vec<Tile>,
+	meshes: Vec<Mesh<TextureVertex>>,
 }
-
-/*
-  TILEMAP STATS:
-  - width: 36
-  - height: 44
-  - tiles: 1584
-
-  TARGET STATS (BASE MESH):
-  - vertices:
-    - per layer: 6336
-	- max for both layers: 12672
-  - indices:
-    - per layer: 9504
-	- max for both layers: 19008
-
-  ACTUAL STATS (BASE MESH):
-  - vertices: 6336
-  - indices: 9504
- */
 
 impl Tilemap {
 	fn load(core: &GraphicsCore, texture: Texture, buffer: &Vec::<u8>) -> Tilemap {
@@ -154,9 +133,14 @@ impl Tilemap {
 		let height = read_u16(&buffer, &mut offset) as u32;
 		let buffer_length = (width * height * 6) as usize;
 		let buffer = read_slice(&buffer, &mut offset, buffer_length);
-		let tiles = Tilemap::build_tiles(&buffer, width, height);
-		let (base_mesh, _) = Tilemap::build_mesh(&core, width, &tiles, false);
-		let (anim_mesh, anim_verts) = Tilemap::build_mesh(core, width, &tiles, true);
+		let tiles = Self::build_tiles(&buffer, width, height);
+
+		let meshes = [
+			Self::build_layer_mesh(&core, &tiles, width, 0, false),
+			Self::build_layer_mesh(&core, &tiles, width, 0, true),
+			Self::build_layer_mesh(&core, &tiles, width, 1, false),
+			Self::build_layer_mesh(&core, &tiles, width, 1, true),
+		].into_iter().filter_map(std::convert::identity).collect();
 
 		Tilemap {
 			width,
@@ -164,9 +148,7 @@ impl Tilemap {
 			frame_index: 0,
 			texture,
 			tiles,
-			base_mesh,
-			anim_mesh,
-			anim_verts,
+			meshes,
 		}
 	}
 
@@ -192,24 +174,60 @@ impl Tilemap {
 		]).collect()
 	}
 
-	fn build_mesh(core: &GraphicsCore, width: u32, tiles: &Vec::<Tile>, animated: bool) -> (Option<Mesh>, Vec<TextureVertex>) {
-		let build = |index| Tilemap::build_vertices(width, tiles, index, animated);
-		let vertices = [&build(0)[..], &build(1)[..]].concat();
-
-		println!("vertices: {}", vertices.len());
+	fn build_layer_mesh(
+		core: &GraphicsCore,
+		tiles: &Vec::<Tile>,
+		width: u32,
+		index: usize,
+		animated: bool,
+	) -> Option<Mesh<TextureVertex>> {
+		let vertices = Self::build_layer_vertices(tiles, width, index, animated);
 	
-		let mesh = if vertices.len() > 0 {
-			let indices = Tilemap::build_indices(tiles.len());
-			let mesh = Mesh::make(core.device(), &vertices, Some(&indices));
-
-			println!("indices: {}", indices.len());
+		if vertices.len() > 0 {
+			let indices = Self::build_indices(tiles.len());
+			let mesh = Mesh::make(core.device(), &vertices, Some(&indices), animated);
 
 			Some(mesh)
 		} else {
 			None
-		};
+		}
+	}
 
-		(mesh, vertices)
+	fn build_layer_vertices(
+		tiles: &Vec::<Tile>,
+		width: u32,
+		index: usize,
+		animated: bool
+	) -> Vec<TextureVertex> {
+		let width = width as usize;
+
+		tiles
+			.iter()
+			.enumerate()
+			.filter(|item| Self::should_process_layer(item.1, index, animated))
+			.map(|(i, item)| {
+				let layer = item[index];
+				let cell_x = (i % width) as f32;
+				let cell_y = (i / width) as f32;
+				let tile_x = (layer.index % 16) as f32;
+				let tile_y = (layer.index / 16) as f32;
+				let cell_pos = Vector2::new(cell_x, cell_y);
+				let tile_pos = Vector2::new(tile_x, tile_y);
+
+				let verts: Vec::<TextureVertex> = (0..4)
+					.map(|e| Self::build_vertex(
+						layer.kind,
+						index,
+						e,
+						cell_pos,
+						tile_pos
+					))
+					.collect();
+
+				verts
+			})
+			.flatten()
+			.collect()
 	}
 
 	fn build_indices(count: usize) -> Vec<u16> {
@@ -223,25 +241,6 @@ impl Tilemap {
 		.collect()
 	}
 
-	fn build_vertices(width: u32, tiles: &Vec::<Tile>, layer_index: usize, animated: bool) -> Vec<TextureVertex> {
-		let width = width as usize;
-
-		tiles
-			.iter()
-			.enumerate()
-			.filter_map(|item| Tilemap::should_process_layer(item.1, layer_index, animated))
-			.map(|(i, item)| {
-				let cell_pos = Vector2::new((i % width) as f32, (i / width) as f32);
-				let tile_pos = Vector2::new((item.index % 16) as f32, (item.index / 16) as f32);
-
-				let verts: Vec::<TextureVertex> = (0..4).map(|e| Tilemap::build_vertex(item.kind, layer_index, e, cell_pos, tile_pos)).collect();
-
-				verts
-			})
-			.flatten()
-			.collect()
-	}
-
 	fn build_vertex(kind: TileKind, layer_index: usize, corner_index: usize, cell_pos: Vector2<f32>, tile_pos: Vector2<f32>) -> TextureVertex {
 		let offset_pos = POS[corner_index] + (cell_pos * TILE_SIZE);
         let offset_uv = UV[corner_index] + (tile_pos * TILE_MAG) + kind.get_atlas_offset();
@@ -249,26 +248,23 @@ impl Tilemap {
 		TextureVertex {
 			x: offset_pos.x,
 			y: offset_pos.y,
-			z: layer_index as f32 * 2.0,
+			z: layer_index as f32 * -2.0,
 			u: offset_uv.x,
 			v: offset_uv.y,
 		}
 	}
 
-	fn should_process_layer(tile: &Tile, index: usize, animated: bool) -> Option<(usize, Layer)> {
-		let layer = tile[index];
+	fn should_process_layer(tile: &Tile, layer_index: usize, animated: bool) -> bool {
+		let layer = tile[layer_index];
+		let valid_tile = layer.index > 0;
 
-		let can = if animated {
+		let valid_animation = if animated {
 			layer.kind == TileKind::Anm
 		} else {
 			layer.kind != TileKind::Anm
 		};
 
-		if can {
-			Some((index, layer))
-		} else {
-			None
-		}
+		valid_tile && valid_animation
 	}
 
 	#[inline]
@@ -332,13 +328,7 @@ impl Tilemap {
 		render_pass.set_bind_group(0, camera.bind_group(), &[]);
 		render_pass.set_bind_group(1, self.texture.bind_group(), &[]);
 
-		if let Some(mesh) = &self.base_mesh {
-			mesh.render(render_pass);
-		}
-
-		if let Some(mesh) = &self.anim_mesh {
-			mesh.render(render_pass);
-		}
+		self.meshes.iter().for_each(|mesh| mesh.render(render_pass));
 	}
 }
 

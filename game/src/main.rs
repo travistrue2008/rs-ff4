@@ -50,7 +50,7 @@ pub struct App {
 }
 
 impl App {
-	async fn new(window: &Window) -> Self {
+	async fn new(window: &mut Window) -> Self {
 		let path = Path::new("./assets/tilemap");
 		let graphics_core = GraphicsCore::new(window).await;
 
@@ -68,6 +68,13 @@ impl App {
 
 		camera.ortho(480.0, 272.0);
 
+		window.set_inner_size(
+			winit::dpi::LogicalSize::new(
+				level.get_px_width() / window.scale_factor() as f32,
+				level.get_px_height() / window.scale_factor() as f32,
+			)
+		);
+
 		Self {
 			last_time: 0.0,
 			start_time: Instant::now(),
@@ -79,6 +86,7 @@ impl App {
 
 	fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
 		self.graphics_core.resize(size);
+		self.camera.ortho(size.width as f32, size.height as f32);
 	}
 
 	fn input(&mut self, _event: &WindowEvent) -> bool {
@@ -134,7 +142,7 @@ async fn main() {
 
 	let event_loop = EventLoop::new();
 
-	let window = WindowBuilder::new()
+	let mut window = WindowBuilder::new()
 		.with_title("Final Fantasy IV")
 		.with_window_icon(Some(create_icon()))
 		.with_resizable(false)
@@ -142,7 +150,7 @@ async fn main() {
 		.build(&event_loop).unwrap();
 
 	let mut screen_size = winit::dpi::PhysicalSize::new(0, 0);
-	let mut app = App::new(&window).await;
+	let mut app = App::new(&mut window).await;
 
 	event_loop.run(move |event, _, control_flow| match event {
 		Event::WindowEvent {
