@@ -1,13 +1,13 @@
 use bytemuck::*;
 
 pub trait Vertex {
-	fn get_layout() -> wgpu::VertexBufferLayout<'static>;
+	fn layout() -> wgpu::VertexBufferLayout<'static>;
 }
 
 type PositionVertex = [f32; 3];
 
 impl Vertex for PositionVertex {
-	fn get_layout() -> wgpu::VertexBufferLayout<'static> {
+	fn layout() -> wgpu::VertexBufferLayout<'static> {
 		const ATTRS: [wgpu::VertexAttribute; 1] =
 			wgpu::vertex_attr_array![0 => Float32x3];
 	
@@ -30,7 +30,7 @@ pub struct TextureVertex {
 }
 
 impl Vertex for TextureVertex {
-	fn get_layout() -> wgpu::VertexBufferLayout<'static> {
+	fn layout() -> wgpu::VertexBufferLayout<'static> {
 		const ATTRS: [wgpu::VertexAttribute; 2] = wgpu::vertex_attr_array![
 			0 => Float32x3,
 			1 => Float32x2,

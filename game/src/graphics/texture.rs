@@ -7,10 +7,11 @@ pub struct Texture {
 	handle: wgpu::Texture,
 	sampler: Sampler,
 	view: TextureView,
+	bind_group: BindGroup,
 }
 
 impl Texture {
-	pub fn new(device: &Device, width: u32, height: u32) -> Texture {
+	pub fn new(device: &Device, layout: &BindGroupLayout, width: u32, height: u32) -> Texture {
 		let size = Extent3d {
 			width,
 			height,
@@ -19,7 +20,7 @@ impl Texture {
 
 		let handle = device.create_texture(
 			&TextureDescriptor {
-				label: None,
+				label: Some("Texture"),
 				size,
 				mip_level_count: 1,
 				sample_count: 1,
@@ -41,6 +42,8 @@ impl Texture {
 			mipmap_filter: FilterMode::Nearest,
 			..Default::default()
 		});
+
+		let bind_group = Self::create_bind_group(device, layout, &view, &sampler);
 	
 		Texture {
 			width,
@@ -48,18 +51,41 @@ impl Texture {
 			handle,
 			sampler,
 			view,
+			bind_group,
 		}
 	}
 
-	pub fn from_image(device: &Device, queue: &Queue, image: &Image) -> Texture {
+	pub fn from_image(device: &Device, layout: &BindGroupLayout, queue: &Queue, image: &Image) -> Texture {
 		let frame = image.get_frame(0);
 		let buffer = frame.to_raw(None);
 		let width = frame.width() as u32;
 		let height = frame.height() as u32;
-		let result = Self::new(device, width, height);
+		let result = Self::new(device, layout, width, height);
 
 		result.write(queue, &buffer, Origin3d::ZERO, width, height);
 		result
+	}
+
+	fn create_bind_group(
+		device: &Device,
+		layout: &BindGroupLayout,
+		view: &TextureView,
+		sampler: &Sampler
+	) -> BindGroup {
+		device.create_bind_group(&BindGroupDescriptor {
+			label: Some("Texture"),
+			layout,
+			entries: &[
+				BindGroupEntry {
+					binding: 0,
+					resource: BindingResource::TextureView(&view),
+				},
+				BindGroupEntry {
+					binding: 1,
+					resource: BindingResource::Sampler(&sampler),
+				}
+			],
+		})
 	}
 
 	pub fn write(&self, queue: &Queue, buffer: &Vec<u8>, origin: Origin3d, width: u32, height: u32) {
@@ -86,25 +112,6 @@ impl Texture {
 		)
 	}
 
-	pub fn create_bind_group(&self, device: &Device, layout: &BindGroupLayout) -> BindGroup {
-		device.create_bind_group(
-			&BindGroupDescriptor {
-				label: None,
-				layout,
-				entries: &[
-					BindGroupEntry {
-						binding: 0,
-						resource: BindingResource::TextureView(&self.view),
-					},
-					BindGroupEntry {
-						binding: 1,
-						resource: BindingResource::Sampler(&self.sampler),
-					}
-				],
-			}
-		)
-	}
-
 	pub fn width(&self) -> u32 {
 		self.width
 	}
@@ -117,11 +124,7 @@ impl Texture {
 		&self.handle
 	}
 
-	pub fn sampler(&self) -> &Sampler {
-		&self.sampler
-	}
-
-	pub fn view(&self) -> &TextureView {
-		&self.view
+	pub fn bind_group(&self) -> &BindGroup {
+		&self.bind_group
 	}
 }

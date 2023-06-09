@@ -1,14 +1,13 @@
 use wgpu::*;
 use winit::window::Window;
 
-use super::pipeline;
+use super::pipelines;
 
 pub struct Core {
 	config: SurfaceConfiguration,
 	device: Device,
 	queue: Queue,
 	surface: Surface,
-	layout: BindGroupLayout,
 	pipeline: RenderPipeline,
 }
 
@@ -39,9 +38,9 @@ impl Core {
 	async fn build_device_queue(adapter: &Adapter) -> (Device, Queue) {
 		adapter.request_device(
 			&DeviceDescriptor {
+				label: Some("Device"),
 				features: Features::empty(),
 				limits: Limits::default(),
-				label: None,
 			},
 			None,
 		).await.unwrap()
@@ -76,30 +75,6 @@ impl Core {
 		config
 	}
 
-	fn build_textured_bind_group(device: &Device) -> BindGroupLayout {
-		device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-			label: None,
-			entries: &[
-				BindGroupLayoutEntry {
-					binding: 0,
-					count: None,
-					visibility: ShaderStages::FRAGMENT,
-					ty: BindingType::Texture {
-						multisampled: false,
-						view_dimension: TextureViewDimension::D2,
-						sample_type: TextureSampleType::Float { filterable: true },
-					},
-				},
-				BindGroupLayoutEntry {
-					binding: 1,
-					count: None,
-					visibility: ShaderStages::FRAGMENT,
-					ty: BindingType::Sampler(SamplerBindingType::Filtering),
-				},
-			],
-		})
-	}
-
 	pub async fn new(window: &Window) -> Self {
 		let window_size = window.inner_size();
 		let instance = Self::build_instance();
@@ -107,8 +82,7 @@ impl Core {
 		let adapter = Self::build_adapter(&instance, &surface).await;
 		let (device, queue) = Self::build_device_queue(&adapter).await;
 		let config = Self::build_surface_config(window_size, &surface, &adapter, &device);
-		let layout = Self::build_textured_bind_group(&device);
-		let pipeline = pipeline::build(&device, &config, &layout);
+		let pipeline = pipelines::textured::build(&device, &config);
 
 		println!("adapter info: {:#?}", adapter.get_info());
 
@@ -117,7 +91,6 @@ impl Core {
 			device,
 			queue,
 			surface,
-			layout,
 			pipeline,
 		}
 	}
@@ -146,10 +119,6 @@ impl Core {
 
 	pub fn surface(&self) -> &Surface {
 		&self.surface
-	}
-
-	pub fn layout(&self) -> &BindGroupLayout {
-		&self.layout
 	}
 
 	pub fn pipeline(&self) -> &RenderPipeline {

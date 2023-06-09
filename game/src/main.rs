@@ -8,6 +8,7 @@ use std::time::Instant;
 use tilemap::Tilemap;
 
 use crate::graphics::{
+	Camera,
 	Core as GraphicsCore,
 };
 
@@ -41,7 +42,10 @@ fn create_icon() -> Icon {
 }
 
 pub struct App {
+	last_time: f32,
+	start_time: Instant,
 	graphics_core: GraphicsCore,
+	camera: Camera,
 	level: Tilemap,
 }
 
@@ -50,6 +54,9 @@ impl App {
 		let path = Path::new("./assets/tilemap");
 		let graphics_core = GraphicsCore::new(window).await;
 
+		let layout = &graphics_core.pipeline().get_bind_group_layout(0);
+		let mut camera = Camera::new(graphics_core.device(), layout);
+
 		let level = tilemap::load(
 			&graphics_core,
 			path,
@@ -57,8 +64,15 @@ impl App {
 			"castle1_b",
 		).unwrap();
 
+		println!("dims<{}, {}>", level.get_px_width(), level.get_px_height());
+
+		camera.ortho(480.0, 272.0);
+
 		Self {
+			last_time: 0.0,
+			start_time: Instant::now(),
 			graphics_core,
+			camera,
 			level,
 		}
 	}
@@ -72,6 +86,13 @@ impl App {
 	}
 
 	fn update(&mut self) {
+		// let elapsed_time = self.start_time.elapsed().as_secs_f32();
+		// let frame_time = elapsed_time - self.last_time;
+
+		// println!("frame_time: {}", frame_time);
+		// self.last_time = elapsed_time;
+
+		self.camera.update(&self.graphics_core.queue());
 	}
 
 	fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -97,7 +118,7 @@ impl App {
 			});
 
 			render_pass.set_pipeline(self.graphics_core.pipeline());
-			self.level.render(&mut render_pass);
+			self.level.render(&mut render_pass, &self.camera);
 		}
 	
 		self.graphics_core.queue().submit(std::iter::once(encoder.finish()));
@@ -111,7 +132,6 @@ impl App {
 async fn main() {
 	env_logger::init();
 
-	let start_time = Instant::now();
 	let event_loop = EventLoop::new();
 
 	let window = WindowBuilder::new()
@@ -121,7 +141,6 @@ async fn main() {
 		.with_inner_size(WINDOW_SIZE)
 		.build(&event_loop).unwrap();
 
-	let mut last_time = 0f32;
 	let mut screen_size = winit::dpi::PhysicalSize::new(0, 0);
 	let mut app = App::new(&window).await;
 
@@ -148,12 +167,6 @@ async fn main() {
 			}
 		},
 		Event::RedrawRequested(window_id) if window_id == window.id() => {
-			let elapsed_time = start_time.elapsed().as_secs_f32();
-			let frame_time = elapsed_time - last_time;
-
-			println!("frame_time: {}", frame_time);
-			last_time = elapsed_time;
-
 			app.update();
 
 			match app.render() {

@@ -2,7 +2,7 @@ mod camera;
 mod core;
 mod mesh;
 mod texture;
-mod pipeline;
+mod pipelines;
 mod vertex;
 
 pub use self::camera::*;

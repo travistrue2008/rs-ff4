@@ -21,7 +21,7 @@ impl Mesh {
 			Some(indices) => Some(
 				device.create_buffer_init(
 					&wgpu::util::BufferInitDescriptor {
-						label: None,
+						label: Some("Mesh"),
 						usage: BufferUsages::INDEX,
 						contents: bytemuck::cast_slice(indices),
 					}
@@ -32,7 +32,7 @@ impl Mesh {
 
 		let vertex_buffer = device.create_buffer_init(
 			&wgpu::util::BufferInitDescriptor {
-				label: None,
+				label: Some("Mesh"),
 				usage: BufferUsages::VERTEX,
 				contents: bytemuck::cast_slice(vertices),
 			}

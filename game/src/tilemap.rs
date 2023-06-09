@@ -8,6 +8,7 @@ use wgpu::*;
 use crate::common::*;
 use crate::error::{Result, Error};
 use crate::graphics::{
+	Camera,
 	Core as GraphicsCore,
 	Mesh,
 	TextureVertex,
@@ -121,7 +122,6 @@ pub struct Tilemap {
 	height: u32,
 	frame_index: u32,
 	texture: Texture,
-	texture_bind_group: BindGroup,
 	tiles: Vec::<Tile>,
 	anim_verts: Vec::<TextureVertex>,
 	base_mesh: Option<Mesh>,
@@ -154,7 +154,6 @@ impl Tilemap {
 		let height = read_u16(&buffer, &mut offset) as u32;
 		let buffer_length = (width * height * 6) as usize;
 		let buffer = read_slice(&buffer, &mut offset, buffer_length);
-		let texture_bind_group = texture.create_bind_group(core.device(), core.layout());
 		let tiles = Tilemap::build_tiles(&buffer, width, height);
 		let (base_mesh, _) = Tilemap::build_mesh(&core, width, &tiles, false);
 		let (anim_mesh, anim_verts) = Tilemap::build_mesh(core, width, &tiles, true);
@@ -164,7 +163,6 @@ impl Tilemap {
 			height,
 			frame_index: 0,
 			texture,
-			texture_bind_group,
 			tiles,
 			base_mesh,
 			anim_mesh,
@@ -330,8 +328,9 @@ impl Tilemap {
 		}
 	}
 
-	pub fn render<'a>(&'a self, render_pass: &mut RenderPass<'a>) {
-		render_pass.set_bind_group(0, &self.texture_bind_group, &[]);
+	pub fn render<'a>(&'a self, render_pass: &mut RenderPass<'a>, camera: &'a Camera) {
+		render_pass.set_bind_group(0, camera.bind_group(), &[]);
+		render_pass.set_bind_group(1, self.texture.bind_group(), &[]);
 
 		if let Some(mesh) = &self.base_mesh {
 			mesh.render(render_pass);
@@ -373,13 +372,14 @@ fn build_texture<P: AsRef<Path>>(core: &GraphicsCore, path: P, name: &str) -> Re
 	let base_data = load_frame(&path, name, TileKind::Base)?;
 	let var_data = load_frame(&path, name, TileKind::Var)?;
 	let anm_data = load_frame(&path, name, TileKind::Anm)?;
-	let tex = Texture::new(core.device(), 1024, 1024);
+	let layout = &core.pipeline().get_bind_group_layout(1);
+	let result = Texture::new(core.device(), layout, 1024, 1024);
 
-	tex.write(core.queue(), &base_data, ORIGIN_BASE, TEXTURE_SIZE, TEXTURE_SIZE);
-	tex.write(core.queue(), &var_data, ORIGIN_VAR, TEXTURE_SIZE, TEXTURE_SIZE);
-	tex.write(core.queue(), &anm_data, ORIGIN_ANM, TEXTURE_SIZE, TEXTURE_SIZE);
+	result.write(core.queue(), &base_data, ORIGIN_BASE, TEXTURE_SIZE, TEXTURE_SIZE);
+	result.write(core.queue(), &var_data, ORIGIN_VAR, TEXTURE_SIZE, TEXTURE_SIZE);
+	result.write(core.queue(), &anm_data, ORIGIN_ANM, TEXTURE_SIZE, TEXTURE_SIZE);
 
-	Ok(tex)
+	Ok(result)
 }
 
 pub fn load<P: AsRef<Path>>(core: &GraphicsCore, path: P, map_filename: &str, set_name: &str) -> Result<Tilemap> {
