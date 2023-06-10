@@ -1,23 +1,20 @@
 use wgpu::*;
 use wgpu::util::DeviceExt;
-use super::super::error::Error;
 use super::vertex::Vertex;
 
-pub struct Mesh<TVertex: Vertex> {
+pub struct Mesh {
 	index_count: u32,
 	vertex_count: u32,
 	index_buffer: Option<Buffer>,
 	vertex_buffer: Buffer,
-	vertices: Option<Vec<TVertex>>,
 }
 
-impl<TVertex: Vertex> Mesh<TVertex> {
-	pub fn make(
+impl Mesh {
+	pub fn make<T: Vertex>(
 		device: &Device,
-		vertices: &Vec::<TVertex>,
+		vertices: &Vec::<T>,
 		indices: Option<&Vec::<u16>>,
-		store_vertices: bool,
-	) -> Mesh<TVertex> {
+	) -> Mesh {
 		let index_count = match indices {
 			Some(indices) => indices.len() as u32,
 			None => 0,
@@ -39,23 +36,16 @@ impl<TVertex: Vertex> Mesh<TVertex> {
 		let vertex_buffer = device.create_buffer_init(
 			&wgpu::util::BufferInitDescriptor {
 				label: Some("Mesh"),
-				usage: BufferUsages::VERTEX,
+				usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
 				contents: bytemuck::cast_slice(vertices),
 			}
 		);
-
-		let verts = if store_vertices {
-			Some(vertices.clone())
-		} else {
-			None
-		};
 
 		Mesh {
 			index_count,
 			vertex_count: vertices.len() as u32,
 			index_buffer,
 			vertex_buffer,
-			vertices: verts,
 		}
 	}
 
@@ -73,23 +63,10 @@ impl<TVertex: Vertex> Mesh<TVertex> {
 		}
 	}
 
-	pub fn write(&self, queue: &Queue) -> Result<(), Error> {
-		if let Some(vertices) = self.vertices.as_ref() {
-			let buffer = bytemuck::cast_slice(vertices);
+	pub fn write_vertices<T: Vertex>(&mut self, queue: &Queue, vertices: &Vec<T>) {
+		let buffer = bytemuck::cast_slice(&vertices);
 
-			queue.write_buffer(&self.vertex_buffer, 0, buffer);
-
-			Ok(())
-		} else {
-			Err(Error::MeshWriteWithNoVertices)
-		}
-	}
-
-	pub fn vertices(&self) -> &Option<Vec<TVertex>> {
-		&self.vertices
-	}
-
-	pub fn vertices_mut(&mut self) -> &mut Option<Vec<TVertex>> {
-		&mut self.vertices
+		self.vertex_count = vertices.len() as u32;
+		queue.write_buffer(&self.vertex_buffer, 0, buffer);
 	}
 }

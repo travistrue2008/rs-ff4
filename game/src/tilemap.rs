@@ -116,32 +116,43 @@ struct Cell {
 	position: Vector2<f32>,
 }
 
+impl Cell {
+	fn get_tile_position(&self) -> Vector2<f32> {
+		let tile_x = (self.tile_index % 16) as f32;
+		let tile_y = (self.tile_index / 16) as f32;
+
+		Vector2::new(tile_x, tile_y)
+	}
+}
+
 struct Layer {
 	cells: Vec<Cell>,
-	static_mesh: Option<Mesh<TextureVertex>>,
-	animated_mesh: Option<Mesh<TextureVertex>>,
+	static_mesh: Option<Mesh>,
+	animated_mesh: Option<Mesh>,
+	animated_vertices: Vec<TextureVertex>,
 }
 
 impl Layer {
 	fn new(core: &GraphicsCore, cells: &Vec<Cell>, index: usize) -> Layer {
+		let static_vertices = Self::build_vertices(cells, index, false);
+		let animated_vertices = Self::build_vertices(cells, index, true);
+
 		Layer {
 			cells: cells.to_vec(),
-			static_mesh: Self::build_mesh(core, cells, index, false),
-			animated_mesh: Self::build_mesh(core, cells, index, true),
+			static_mesh: Self::build_mesh(core, cells, &static_vertices),
+			animated_mesh: Self::build_mesh(core, cells, &animated_vertices),
+			animated_vertices,
 		}
 	}
 
 	fn build_mesh(
 		core: &GraphicsCore,
 		cells: &Vec::<Cell>,
-		index: usize,
-		animated: bool,
-	) -> Option<Mesh<TextureVertex>> {
-		let vertices = Self::build_vertices(cells, index, animated);
-	
+		vertices: &Vec<TextureVertex>,
+	) -> Option<Mesh> {
 		if vertices.len() > 0 {
 			let indices = Self::build_indices(cells.len());
-			let mesh = Mesh::make(core.device(), &vertices, Some(&indices), animated);
+			let mesh = Mesh::make(core.device(), &vertices, Some(&indices));
 
 			Some(mesh)
 		} else {
@@ -156,12 +167,10 @@ impl Layer {
 			.iter()
 			.filter(|cell| Self::has_verts_for_cell(cell, animated))
 			.map(|cell| {
-				let tile_x = (cell.tile_index % 16) as f32;
-				let tile_y = (cell.tile_index / 16) as f32;
-				let tile_pos = Vector2::new(tile_x, tile_y);
+				let tile_position = cell.get_tile_position();
 
 				let verts: Vec::<TextureVertex> = (0..4)
-					.map(|e| Self::build_vertex(cell, offset_z, e, tile_pos))
+					.map(|e| Self::build_vertex(cell, offset_z, e, tile_position))
 					.collect();
 
 				verts
@@ -204,7 +213,27 @@ impl Layer {
 	}
 
 	#[inline]
-	pub fn update(&self, queue: &Queue, frame_index: usize) {
+	pub fn update(&mut self, queue: &Queue, frame_index: usize) {
+		if let Some(mesh) = self.animated_mesh.as_mut() {
+			let x_atlas = CellKind::Anm.get_atlas_offset().x;
+
+			self.cells
+				.iter()
+				.filter(|cell| cell.kind == CellKind::Anm)
+				.enumerate()
+				.for_each(|(i, cell)| {
+					for e in 0..4 {
+						let index = i * 4 + e;
+						let x_cell = cell.get_tile_position().x;
+						let x_position = x_cell + frame_index as f32;
+						let result = UV[e].x + (x_position * TILE_MAG) + x_atlas;
+
+						self.animated_vertices[index].u = result;
+					}
+				});
+
+			mesh.write_vertices(queue, &self.animated_vertices);
+		}
 	}
 
 	pub fn render<'a>(&'a self, render_pass: &mut RenderPass<'a>) {
