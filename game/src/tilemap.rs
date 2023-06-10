@@ -106,6 +106,23 @@ impl TriggerKind {
 			n => TriggerKind::Unknown(n),
 		}
 	}
+
+	fn to_raw(&self) -> u8 {
+		match self {
+			TriggerKind::Passable => 0x00,
+			TriggerKind::Blocker => 0x01,
+			TriggerKind::UpperLowerDelta => 0x02,
+			TriggerKind::LowerUpperDelta => 0x03,
+			TriggerKind::Hidden => 0x04,
+			TriggerKind::Bridge => 0x05,
+			TriggerKind::Damage => 0x06,
+			TriggerKind::BottomTransparent => 0x10,
+			TriggerKind::BottomHidden => 0x11,
+			TriggerKind::Treasure(v) => *v,
+			TriggerKind::Exit(v) => *v,
+			TriggerKind::Unknown(v) => *v,
+		}
+	}
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -147,7 +164,7 @@ impl Layer {
 
 	fn build_mesh(
 		core: &GraphicsCore,
-		cells: &Vec::<Cell>,
+		cells: &Vec<Cell>,
 		vertices: &Vec<TextureVertex>,
 	) -> Option<Mesh> {
 		if vertices.len() > 0 {
@@ -160,7 +177,7 @@ impl Layer {
 		}
 	}
 
-	fn build_vertices(cells: &Vec::<Cell>, index: usize, animated: bool) -> Vec<TextureVertex> {
+	fn build_vertices(cells: &Vec<Cell>, index: usize, animated: bool) -> Vec<TextureVertex> {
 		let offset_z = index as f32 * -2.0;
 
 		cells
@@ -169,7 +186,7 @@ impl Layer {
 			.map(|cell| {
 				let tile_position = cell.get_tile_position();
 
-				let verts: Vec::<TextureVertex> = (0..4)
+				let verts: Vec<TextureVertex> = (0..4)
 					.map(|e| Self::build_vertex(cell, offset_z, e, tile_position))
 					.collect();
 
@@ -253,15 +270,21 @@ pub struct Tilemap {
 	frame_index: usize,
 	texture: Texture,
 	layers: [Layer; 2],
+	collision: Vec<u8>,
 }
 
 impl Tilemap {
-	fn load(core: &GraphicsCore, texture: Texture, buffer: &Vec::<u8>) -> Tilemap {
+	fn load(
+		core: &GraphicsCore,
+		texture: Texture,
+		map_buffer: &Vec<u8>,
+		collision_buffer: &Vec<u8>
+	) -> Tilemap {
 		let mut offset = 0usize;
-		let width = read_u16(&buffer, &mut offset);
-		let height = read_u16(&buffer, &mut offset);
+		let width = read_u16(&map_buffer, &mut offset);
+		let height = read_u16(&map_buffer, &mut offset);
 		let buffer_length = (width * height * 6) as usize;
-		let buffer = read_slice(&buffer, &mut offset, buffer_length);
+		let buffer = read_slice(&map_buffer, &mut offset, buffer_length);
 		let (lower_cells, upper_cells) = Self::build_cells(&buffer, width, height);
 
 		let layers = [
@@ -275,6 +298,7 @@ impl Tilemap {
 			frame_index: 0,
 			texture,
 			layers,
+			collision: collision_buffer.to_vec(),
 		}
 	}
 
@@ -310,7 +334,7 @@ impl Tilemap {
 		)
 	}
 
-	fn filter_layer_cells(cells: Vec::<Cell>) -> Vec<Cell> {
+	fn filter_layer_cells(cells: Vec<Cell>) -> Vec<Cell> {
 		cells
 			.into_iter()
 			.filter(|cell| cell.kind == CellKind::Anm || cell.tile_index > 0)
@@ -350,9 +374,47 @@ impl Tilemap {
 		self.layers[0].render(render_pass);
 		self.layers[1].render(render_pass);
 	}
+
+	pub fn print_triggers(&self, layer_index: usize) {
+		let layer = &self.layers[layer_index];
+
+		for y in 0..self.height {
+			for x in 0..self.height {
+				let cell = layer.cells
+					.iter()
+					.find(|cell| x == cell.position.x as u16 && y == cell.position.x as u16);
+
+				let trigger = if let Some(cell) = cell {
+					cell.trigger.to_raw()
+				} else {
+					0
+				};
+
+				print!("{:02x?} ", trigger);
+			}
+
+			println!("");
+		}
+	}
+
+	pub fn print_collision(&self, layer_index: usize) {
+		let layer_size = self.collision.len() / 2;
+		let layer_offset = layer_size * layer_index;
+
+		for y in 0..self.height {
+			for x in 0..self.width {
+				let index = (y * self.width + x) as usize + layer_offset;
+				let flag = self.collision[index];
+
+				print!("{:02x?} ", flag);
+			}
+
+			println!("");
+		}
+	}
 }
 
-fn load_frame<P: AsRef<Path>>(path: P, name: &str, kind: CellKind) -> Result<Vec::<u8>> {
+fn load_frame<P: AsRef<Path>>(path: P, name: &str, kind: CellKind) -> Result<Vec<u8>> {
 	let color_key = Pixel::from(0, 255, 0, 255);
 	let filename = format!("{}_{}.tm2", name, kind.get_suffix());
 	let path = path.as_ref().join(filename);
@@ -392,13 +454,32 @@ fn build_texture<P: AsRef<Path>>(core: &GraphicsCore, path: P, name: &str) -> Re
 	Ok(result)
 }
 
-pub fn load<P: AsRef<Path>>(core: &GraphicsCore, path: P, map_filename: &str, set_name: &str) -> Result<Tilemap> {
-	let texture = build_texture(core, &path, set_name)?;
-	let file_path = path.as_ref().join(map_filename);
+fn build_map_buffer<P: AsRef<Path>>(path: P, name: &str) -> Result<Vec<u8>> {
+	let filename = format!("{}.cn2", name);
+	let file_path = path.as_ref().join(filename);
 	let mut file = File::open(file_path)?;
 	let mut buffer = Vec::new();
 
 	file.read_to_end(&mut buffer)?;
 
-	Ok(Tilemap::load(core, texture, &buffer))
+	Ok(buffer)
+}
+
+fn build_collision_buffer<P: AsRef<Path>>(path: P, name: &str) -> Result<Vec<u8>> {
+	let filename = format!("{}_hit.cns", name);
+	let file_path = path.as_ref().join(filename);
+	let mut file = File::open(file_path)?;
+	let mut buffer = Vec::new();
+
+	file.read_to_end(&mut buffer)?;
+
+	Ok(buffer)
+}
+
+pub fn load<P: AsRef<Path>>(core: &GraphicsCore, path: P, map_name: &str, set_name: &str) -> Result<Tilemap> {
+	let texture = build_texture(core, &path, set_name)?;
+	let map_buffer = build_map_buffer(&path, map_name)?;
+	let collision_buffer = build_collision_buffer(&path, map_name)?;
+
+	Ok(Tilemap::load(core, texture, &map_buffer, &collision_buffer))
 }

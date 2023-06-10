@@ -60,11 +60,14 @@ impl App {
 		let level = tilemap::load(
 			&graphics_core,
 			path,
-			"castle1_baron_castle_01.cn2",
+			"castle1_baron_castle_01",
 			"castle1_b",
 		).unwrap();
 
-		println!("dims<{}, {}>", level.get_px_width(), level.get_px_height());
+		println!("window_dims<{}, {}>", level.get_px_width(), level.get_px_height());
+		level.print_collision(0);
+		println!("");
+		level.print_collision(1);
 
 		camera.ortho(480.0, 272.0);
 
