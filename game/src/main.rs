@@ -94,13 +94,14 @@ impl App {
 	}
 
 	fn update(&mut self) {
-		// let elapsed_time = self.start_time.elapsed().as_secs_f32();
+		let elapsed_time = self.start_time.elapsed().as_secs_f32();
 		// let frame_time = elapsed_time - self.last_time;
 
 		// println!("frame_time: {}", frame_time);
 		// self.last_time = elapsed_time;
 
 		self.camera.update(&self.graphics_core.queue());
+		self.level.update(&self.graphics_core.queue(), elapsed_time);
 	}
 
 	fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

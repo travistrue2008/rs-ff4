@@ -1,5 +1,6 @@
 use wgpu::*;
 use wgpu::util::DeviceExt;
+use super::super::error::Error;
 use super::vertex::Vertex;
 
 pub struct Mesh<TVertex: Vertex> {
@@ -72,11 +73,23 @@ impl<TVertex: Vertex> Mesh<TVertex> {
 		}
 	}
 
+	pub fn write(&self, queue: &Queue) -> Result<(), Error> {
+		if let Some(vertices) = self.vertices.as_ref() {
+			let buffer = bytemuck::cast_slice(vertices);
+
+			queue.write_buffer(&self.vertex_buffer, 0, buffer);
+
+			Ok(())
+		} else {
+			Err(Error::MeshWriteWithNoVertices)
+		}
+	}
+
 	pub fn vertices(&self) -> &Option<Vec<TVertex>> {
 		&self.vertices
 	}
 
-	pub fn vertices_mut(&mut self) -> &Option<Vec<TVertex>> {
-		&self.vertices
+	pub fn vertices_mut(&mut self) -> &mut Option<Vec<TVertex>> {
+		&mut self.vertices
 	}
 }

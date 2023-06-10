@@ -51,7 +51,7 @@
 // 			0 => Ok(TextureKind::Base),
 // 			1 => Ok(TextureKind::Var),
 // 			2 => Ok(TextureKind::Anm),
-// 			n => Err(Error::InvalidTilesetIndex(n)),
+// 			n => Err(Error::InvalidCellKindIndex(n)),
 // 		}
 // 	}
 

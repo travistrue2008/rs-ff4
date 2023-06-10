@@ -8,7 +8,8 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum Error {
 	Io(io::Error),
 	Tim2(tim2::Error),
-	InvalidTilesetIndex(u8),
+	MeshWriteWithNoVertices,
+	InvalidCellKindIndex(u8),
 }
 
 impl From<io::Error> for Error {

@@ -21,7 +21,7 @@ const ATLAS_WIDTH: u32 = 1024;
 const TEXEL: f32 = 1.0 / ATLAS_WIDTH as f32;
 const TILE_SIZE: f32 = 32.0;
 const TILE_MAG: f32 = TEXEL * TILE_SIZE;
-const TILE_INDEX_OFFSETS: [u16; 6] = [0, 1, 2, 0, 2, 3];
+const INDEX_OFFSETS: [u16; 6] = [0, 1, 2, 0, 2, 3];
 
 const POS: [Vector2<f32>; 4] = [
 	Vector2 { x: TILE_SIZE, y: 0.0 },
@@ -36,6 +36,42 @@ const UV: [Vector2<f32>; 4] = [
 	Vector2 { x: 0.0, y: TILE_MAG },
 	Vector2 { x: TILE_MAG, y: TILE_MAG },
 ];
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum CellKind {
+	Base,
+	Var,
+	Anm,
+}
+
+impl CellKind {
+	fn new(index: u8) -> Result<CellKind> {
+		match index {
+			0 => Ok(CellKind::Base),
+			1 => Ok(CellKind::Var),
+			2 => Ok(CellKind::Anm),
+			n => Err(Error::InvalidCellKindIndex(n)),
+		}
+	}
+
+	fn get_suffix(&self) -> &'static str {
+		match self {
+			CellKind::Base => "base",
+			CellKind::Var => "var",
+			CellKind::Anm => "anm",
+		}
+	}
+
+	fn get_atlas_offset(&self) -> Vector2<f32> {
+		let mag = TEXTURE_SIZE as f32 * TEXEL;
+
+		match self {
+			CellKind::Base => Vector2::new(0.0, 0.0),
+			CellKind::Var => Vector2::new(mag, 0.0),
+			CellKind::Anm => Vector2::new(0.0, mag),
+		}
+	}
+}
 
 #[derive(Copy, Clone, Debug)]
 enum TriggerKind {
@@ -73,118 +109,38 @@ impl TriggerKind {
 }
 
 #[derive(Copy, Clone, Debug)]
-struct Layer {
-	kind: TileKind,
+struct Cell {
+	kind: CellKind,
 	trigger: TriggerKind,
-	index: u8,
+	tile_index: u8,
+	position: Vector2<f32>,
 }
 
-type Tile = [Layer; 2];
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum TileKind {
-	Base,
-	Var,
-	Anm,
+struct Layer {
+	cells: Vec<Cell>,
+	static_mesh: Option<Mesh<TextureVertex>>,
+	animated_mesh: Option<Mesh<TextureVertex>>,
 }
 
-impl TileKind {
-	fn new(index: u8) -> Result<TileKind> {
-		match index {
-			0 => Ok(TileKind::Base),
-			1 => Ok(TileKind::Var),
-			2 => Ok(TileKind::Anm),
-			n => Err(Error::InvalidTilesetIndex(n)),
+impl Layer {
+	fn new(core: &GraphicsCore, cells: &Vec<Cell>, index: usize) -> Layer {
+		Layer {
+			cells: cells.to_vec(),
+			static_mesh: Self::build_mesh(core, cells, index, false),
+			animated_mesh: Self::build_mesh(core, cells, index, true),
 		}
 	}
 
-	fn get_suffix(&self) -> &'static str {
-		match self {
-			TileKind::Base => "base",
-			TileKind::Var => "var",
-			TileKind::Anm => "anm",
-		}
-	}
-
-	fn get_atlas_offset(&self) -> Vector2<f32> {
-		let mag = TEXTURE_SIZE as f32 * TEXEL;
-
-		match self {
-			TileKind::Base => Vector2::new(0.0, 0.0),
-			TileKind::Var => Vector2::new(mag, 0.0),
-			TileKind::Anm => Vector2::new(0.0, mag),
-		}
-	}
-}
-
-pub struct Tilemap {
-	width: u32,
-	height: u32,
-	frame_index: u32,
-	texture: Texture,
-	tiles: Vec<Tile>,
-	meshes: Vec<Mesh<TextureVertex>>,
-}
-
-impl Tilemap {
-	fn load(core: &GraphicsCore, texture: Texture, buffer: &Vec::<u8>) -> Tilemap {
-		let mut offset = 0usize;
-		let width = read_u16(&buffer, &mut offset) as u32;
-		let height = read_u16(&buffer, &mut offset) as u32;
-		let buffer_length = (width * height * 6) as usize;
-		let buffer = read_slice(&buffer, &mut offset, buffer_length);
-		let tiles = Self::build_tiles(&buffer, width, height);
-
-		let meshes = [
-			Self::build_layer_mesh(&core, &tiles, width, 0, false),
-			Self::build_layer_mesh(&core, &tiles, width, 0, true),
-			Self::build_layer_mesh(&core, &tiles, width, 1, false),
-			Self::build_layer_mesh(&core, &tiles, width, 1, true),
-		].into_iter().filter_map(std::convert::identity).collect();
-
-		Tilemap {
-			width,
-			height,
-			frame_index: 0,
-			texture,
-			tiles,
-			meshes,
-		}
-	}
-
-	fn build_tiles(buffer: &[u8], width: u32, height: u32) -> Vec<Tile> {
-		let count = (width * height) as usize;
-		let upper_offset = count * 2;
-		let trigger_offset = upper_offset * 2;
-
-		println!("dims<{}, {}>", width, height);
-		println!("count: {}", count);
-
-		(0..count).map(|i| [
-			Layer {
-				kind: TileKind::new(buffer[i * 2 + 1]).unwrap(),
-				trigger: TriggerKind::new(buffer[i * 2 + trigger_offset]),
-				index: buffer[i * 2],
-			},
-			Layer {
-				kind: TileKind::new(buffer[i * 2 + 1 + upper_offset]).unwrap(),
-				trigger: TriggerKind::new(buffer[i * 2 + 1 + trigger_offset]),
-				index: buffer[i * 2 + upper_offset],
-			},
-		]).collect()
-	}
-
-	fn build_layer_mesh(
+	fn build_mesh(
 		core: &GraphicsCore,
-		tiles: &Vec::<Tile>,
-		width: u32,
+		cells: &Vec::<Cell>,
 		index: usize,
 		animated: bool,
 	) -> Option<Mesh<TextureVertex>> {
-		let vertices = Self::build_layer_vertices(tiles, width, index, animated);
+		let vertices = Self::build_vertices(cells, index, animated);
 	
 		if vertices.len() > 0 {
-			let indices = Self::build_indices(tiles.len());
+			let indices = Self::build_indices(cells.len());
 			let mesh = Mesh::make(core.device(), &vertices, Some(&indices), animated);
 
 			Some(mesh)
@@ -193,35 +149,19 @@ impl Tilemap {
 		}
 	}
 
-	fn build_layer_vertices(
-		tiles: &Vec::<Tile>,
-		width: u32,
-		index: usize,
-		animated: bool
-	) -> Vec<TextureVertex> {
-		let width = width as usize;
+	fn build_vertices(cells: &Vec::<Cell>, index: usize, animated: bool) -> Vec<TextureVertex> {
+		let offset_z = index as f32 * -2.0;
 
-		tiles
+		cells
 			.iter()
-			.enumerate()
-			.filter(|item| Self::should_process_layer(item.1, index, animated))
-			.map(|(i, item)| {
-				let layer = item[index];
-				let cell_x = (i % width) as f32;
-				let cell_y = (i / width) as f32;
-				let tile_x = (layer.index % 16) as f32;
-				let tile_y = (layer.index / 16) as f32;
-				let cell_pos = Vector2::new(cell_x, cell_y);
+			.filter(|cell| Self::has_verts_for_cell(cell, animated))
+			.map(|cell| {
+				let tile_x = (cell.tile_index % 16) as f32;
+				let tile_y = (cell.tile_index / 16) as f32;
 				let tile_pos = Vector2::new(tile_x, tile_y);
 
 				let verts: Vec::<TextureVertex> = (0..4)
-					.map(|e| Self::build_vertex(
-						layer.kind,
-						index,
-						e,
-						cell_pos,
-						tile_pos
-					))
+					.map(|e| Self::build_vertex(cell, offset_z, e, tile_pos))
 					.collect();
 
 				verts
@@ -230,10 +170,24 @@ impl Tilemap {
 			.collect()
 	}
 
+	fn build_vertex(cell: &Cell, offset_z: f32, corner_index: usize, tile_pos: Vector2<f32>) -> TextureVertex {
+		let uv_offset = cell.kind.get_atlas_offset();
+		let offset_pos = POS[corner_index] + (cell.position * TILE_SIZE);
+        let offset_uv = UV[corner_index] + (tile_pos * TILE_MAG) + uv_offset;
+
+		TextureVertex {
+			x: offset_pos.x,
+			y: offset_pos.y,
+			z: offset_z,
+			u: offset_uv.x,
+			v: offset_uv.y,
+		}
+	}
+
 	fn build_indices(count: usize) -> Vec<u16> {
 		(0..count).map(|i| {
 			let offset = (i * 4) as u16;
-			let result = TILE_INDEX_OFFSETS.map(|e| e + offset);
+			let result = INDEX_OFFSETS.map(|e| e + offset);
 
 			result
 		})
@@ -241,68 +195,105 @@ impl Tilemap {
 		.collect()
 	}
 
-	fn build_vertex(kind: TileKind, layer_index: usize, corner_index: usize, cell_pos: Vector2<f32>, tile_pos: Vector2<f32>) -> TextureVertex {
-		let offset_pos = POS[corner_index] + (cell_pos * TILE_SIZE);
-        let offset_uv = UV[corner_index] + (tile_pos * TILE_MAG) + kind.get_atlas_offset();
-
-		TextureVertex {
-			x: offset_pos.x,
-			y: offset_pos.y,
-			z: layer_index as f32 * -2.0,
-			u: offset_uv.x,
-			v: offset_uv.y,
+	fn has_verts_for_cell(cell: &Cell, animated: bool) -> bool {
+		if animated {
+			cell.kind == CellKind::Anm
+		} else {
+			cell.kind != CellKind::Anm
 		}
 	}
 
-	fn should_process_layer(tile: &Tile, layer_index: usize, animated: bool) -> bool {
-		let layer = tile[layer_index];
-		let valid_tile = layer.index > 0;
-
-		let valid_animation = if animated {
-			layer.kind == TileKind::Anm
-		} else {
-			layer.kind != TileKind::Anm
-		};
-
-		valid_tile && valid_animation
-	}
-
 	#[inline]
-	fn animate(&mut self, index: u32) {
-		// if let Some(mesh) = &mut self.anim_mesh {
-		// 	let mut cell_offset = 0;
-
-		// 	for i in 0..2 {
-		// 		for tile in &mut self.tiles {
-		// 			let layer = tile[i];
-
-		// 			if layer.kind == TileKind::Anm {
-		// 				let vert_offset = cell_offset * 4;
-		// 				let x_tile = ((layer.index as u32 % 16) + index) as f32;
-
-		// 				for e in 0..4 {
-		// 					self.anim_verts[vert_offset + e].u = UV[e].x + (x_tile * TILE_MAG);
-		// 				}
-
-		// 				cell_offset += 1;
-		// 			}
-		// 		}
-		// 	}
-
-		// 	mesh.write_vertices(&self.anim_verts, 0);
-		// }
+	pub fn update(&self, queue: &Queue, frame_index: usize) {
 	}
 
-	pub fn width(&self) -> u32 {
+	pub fn render<'a>(&'a self, render_pass: &mut RenderPass<'a>) {
+		if let Some(mesh) = &self.static_mesh {
+			mesh.render(render_pass);
+		}
+
+		if let Some(mesh) = &self.animated_mesh {
+			mesh.render(render_pass);
+		}
+	}
+}
+
+pub struct Tilemap {
+	width: u16,
+	height: u16,
+	frame_index: usize,
+	texture: Texture,
+	layers: [Layer; 2],
+}
+
+impl Tilemap {
+	fn load(core: &GraphicsCore, texture: Texture, buffer: &Vec::<u8>) -> Tilemap {
+		let mut offset = 0usize;
+		let width = read_u16(&buffer, &mut offset);
+		let height = read_u16(&buffer, &mut offset);
+		let buffer_length = (width * height * 6) as usize;
+		let buffer = read_slice(&buffer, &mut offset, buffer_length);
+		let (lower_cells, upper_cells) = Self::build_cells(&buffer, width, height);
+
+		let layers = [
+			Layer::new(core, &lower_cells, 0),
+			Layer::new(core, &upper_cells, 1),
+		];
+
+		Tilemap {
+			width,
+			height,
+			frame_index: 0,
+			texture,
+			layers,
+		}
+	}
+
+	fn build_cells(buffer: &[u8], width: u16, height: u16) -> (Vec<Cell>, Vec<Cell>) {
+		let count = (width * height) as usize;
+		let upper_offset = count * 2;
+		let trigger_offset = upper_offset * 2;
+		let mut lower_cells = Vec::new();
+		let mut upper_cells = Vec::new();
+
+		for i in 0..count {
+			let x = (i as u16 % width) as f32;
+			let y = (i as u16 / width) as f32;
+
+			lower_cells.push(Cell {
+				kind: CellKind::new(buffer[i * 2 + 1]).unwrap(),
+				trigger: TriggerKind::new(buffer[i * 2 + trigger_offset]),
+				tile_index: buffer[i * 2],
+				position: Vector2::new(x, y),
+			});
+
+			upper_cells.push(Cell {
+				kind: CellKind::new(buffer[i * 2 + 1 + upper_offset]).unwrap(),
+				trigger: TriggerKind::new(buffer[i * 2 + 1 + trigger_offset]),
+				tile_index: buffer[i * 2 + upper_offset],
+				position: Vector2::new(x, y),
+			});
+		}
+
+		(
+			Self::filter_layer_cells(lower_cells),
+			Self::filter_layer_cells(upper_cells),
+		)
+	}
+
+	fn filter_layer_cells(cells: Vec::<Cell>) -> Vec<Cell> {
+		cells
+			.into_iter()
+			.filter(|cell| cell.kind == CellKind::Anm || cell.tile_index > 0)
+			.collect()
+	}
+
+	pub fn width(&self) -> u16 {
 		self.width
 	}
 
-	pub fn height(&self) -> u32 {
+	pub fn height(&self) -> u16 {
 		self.height
-	}
-
-	pub fn tiles(&self) -> &Vec::<Tile> {
-		&self.tiles
 	}
 
 	pub fn get_px_width(&self) -> f32 {
@@ -313,14 +304,13 @@ impl Tilemap {
 		self.height as f32 * TILE_SIZE
 	}
 
-	pub fn update(&mut self, elapsed_time: f32) {
-		let curr_frame = (elapsed_time * 4.0) as u32 % 4;
+	pub fn update(&mut self, queue: &Queue, elapsed_time: f32) {
+		let curr_frame = (elapsed_time * 4.0) as usize % 4;
 
 		if curr_frame != self.frame_index {
-			self.animate(0);
-			self.animate(1);
-
 			self.frame_index = curr_frame;
+			self.layers[0].update(queue, self.frame_index);
+			self.layers[1].update(queue, self.frame_index);
 		}
 	}
 
@@ -328,11 +318,12 @@ impl Tilemap {
 		render_pass.set_bind_group(0, camera.bind_group(), &[]);
 		render_pass.set_bind_group(1, self.texture.bind_group(), &[]);
 
-		self.meshes.iter().for_each(|mesh| mesh.render(render_pass));
+		self.layers[0].render(render_pass);
+		self.layers[1].render(render_pass);
 	}
 }
 
-fn load_frame<P: AsRef<Path>>(path: P, name: &str, kind: TileKind) -> Result<Vec::<u8>> {
+fn load_frame<P: AsRef<Path>>(path: P, name: &str, kind: CellKind) -> Result<Vec::<u8>> {
 	let color_key = Pixel::from(0, 255, 0, 255);
 	let filename = format!("{}_{}.tm2", name, kind.get_suffix());
 	let path = path.as_ref().join(filename);
@@ -359,9 +350,9 @@ fn build_texture<P: AsRef<Path>>(core: &GraphicsCore, path: P, name: &str) -> Re
 		z: 0,
 	};
 
-	let base_data = load_frame(&path, name, TileKind::Base)?;
-	let var_data = load_frame(&path, name, TileKind::Var)?;
-	let anm_data = load_frame(&path, name, TileKind::Anm)?;
+	let base_data = load_frame(&path, name, CellKind::Base)?;
+	let var_data = load_frame(&path, name, CellKind::Var)?;
+	let anm_data = load_frame(&path, name, CellKind::Anm)?;
 	let layout = &core.pipeline().get_bind_group_layout(1);
 	let result = Texture::new(core.device(), layout, 1024, 1024);
 
