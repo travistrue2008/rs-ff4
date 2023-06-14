@@ -12,8 +12,8 @@ pub struct Mesh {
 impl Mesh {
 	pub fn make<T: Vertex>(
 		device: &Device,
-		vertices: &Vec::<T>,
-		indices: Option<&Vec::<u16>>,
+		vertices: &Vec<T>,
+		indices: Option<&Vec<u16>>,
 	) -> Mesh {
 		let index_count = match indices {
 			Some(indices) => indices.len() as u32,
