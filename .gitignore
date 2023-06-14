@@ -1,3 +1,6 @@
 /iso
 /target
 **/*.rs.bk
+
+.DS_Store
+ff4.iso

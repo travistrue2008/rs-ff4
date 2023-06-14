@@ -1,0 +1,19 @@
+[package]
+name = "tim2"
+version = "0.4.0"
+authors = ["travistrue2008 <travis.true08@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "An image loader for TIM2 (.tm2) image files"
+documentation = "https://docs.rs/tim2"
+repository = "https://www.github.com/travistrue2008/tim2-rs"
+readme = "README.md"
+keywords = ["images", "tim2"]
+categories = ["multimedia::images", "multimedia::encoding"]
+
+[lib]
+name = "tim2"
+path = "src/lib.rs"
+
+[dependencies]
+byteorder = "1.3.4"

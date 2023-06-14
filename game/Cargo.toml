@@ -14,7 +14,7 @@ image = "0.23.2"
 lazy_static = "1.4.0"
 log = "0.4"
 rodio = "0.11.0"
-tim2 = "0.3.0"
+tim2 = { path = "../tim2/lib" }
 tokio = { version = "1.28.2", features = ["full"] }
 winit = "0.27"
 wgpu = "0.15"
