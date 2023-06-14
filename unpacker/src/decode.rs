@@ -141,15 +141,11 @@ fn process_file(path: &Path) -> Result<()> {
 
 	match ext {
 		"lzs" => {
-			println!("Decoding file: {:?}", path);
-
 			let decoded = lzss::decode(&buffer[4..])?;
 
 			extract_files(path, &decoded)?;
 		},
 		"tm2" => {
-			println!("Decoding file: {:?}", path);
-
 			let decoded = decode_buffer(&buffer)?;
 
 			write_file(path, &decoded)?;
@@ -161,6 +157,8 @@ fn process_file(path: &Path) -> Result<()> {
 }
 
 pub fn process() -> Result<()> {
+	println!("Decoding files...");
+
 	for entry in WalkDir::new(PATH_OUTPUT) {
 		let entry = entry?;
 

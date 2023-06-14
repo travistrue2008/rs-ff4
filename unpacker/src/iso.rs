@@ -31,8 +31,6 @@ fn extract_file<P: AsRef<Path>>(
 		.expect(format!("Cannot open file: {:?}", src_path).as_str());
 
 	if let DirectoryEntry::File(file) = src_file {
-		println!("Extracting from ISO: {:?}", src_path);
-
 		let mut buffer = Vec::new();
 		let mut reader = file.read();
 
@@ -64,6 +62,8 @@ fn extract_files_from_iso() -> Result<()> {
 }
 
 pub fn process() -> Result<()> {
+	println!("Extracting from ISO...");
+
 	recreate_dir()?;
 	extract_files_from_iso()?;
 

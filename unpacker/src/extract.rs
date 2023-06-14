@@ -11,8 +11,6 @@ use std::path::Path;
 static PATH_OUTPUT: &str = "../iso/extracted";
 
 fn process_directory(archive: &mut File, nodes: &Children, path: &Path) -> Result<()> {
-	println!("Extracting from directory: {:?}", path);
-
 	fs::create_dir_all(path)?;
 
 	for node in nodes {
@@ -31,7 +29,6 @@ fn process_directory(archive: &mut File, nodes: &Children, path: &Path) -> Resul
 				archive.seek(SeekFrom::Start(*offset as u64))?;
 				archive.read_exact(&mut buffer)?;
 
-				println!("Extracting file: {:?}", path);
 				write_file(path, &buffer)?
 			},
 		};
@@ -41,13 +38,13 @@ fn process_directory(archive: &mut File, nodes: &Children, path: &Path) -> Resul
 }
 
 pub fn process() -> Result<()> {
+	println!("Extracting from PAC1.BIN...");
+
 	let metadata = Metadata::load()?;
 	let nodes = metadata.root()?;
 
 	let mut archive = File::open("../iso/PAC1.BIN")
 		.expect("PAC1.BIN not found");
-
-	println!("Extracting from PAC1.BIN...");
 
 	process_directory(&mut archive, nodes, Path::new(PATH_OUTPUT))?;
 
