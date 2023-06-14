@@ -19,7 +19,7 @@ type SubSection = [u8; SECTION_SIZE];
 struct Image {
     width: usize,
     height: usize,
-    raw: Vec::<u8>,
+    raw: Vec<u8>,
 }
 
 fn get_sub_section(x_tile: usize, y_tile: usize, width: usize, buffer: &[u8]) -> SubSection {
@@ -49,8 +49,8 @@ fn calc_hash(buffer: &SubSection) -> String {
     hasher.result_str()
 }
 
-fn filter_directories<P: AsRef<Path>>(path: P, items: ReadDir) -> Vec::<PathBuf> {
-    let result: Vec::<PathBuf> = items
+fn filter_directories<P: AsRef<Path>>(path: P, items: ReadDir) -> Vec<PathBuf> {
+    let result: Vec<PathBuf> = items
         .filter_map(|item| item.ok())
         .filter(|item| item.file_type().unwrap().is_dir())
         .map(|item| item.file_name().into_string().unwrap())
@@ -63,7 +63,7 @@ fn filter_directories<P: AsRef<Path>>(path: P, items: ReadDir) -> Vec::<PathBuf>
     result
 }
 
-fn filter_files<P: AsRef<Path>>(path: P, name: &str, items: ReadDir) -> Vec::<PathBuf> {
+fn filter_files<P: AsRef<Path>>(path: P, name: &str, items: ReadDir) -> Vec<PathBuf> {
     let suffix = &format!("_{}.tm2", name);
     let result = items
         .filter_map(|item| item.ok())
@@ -76,7 +76,7 @@ fn filter_files<P: AsRef<Path>>(path: P, name: &str, items: ReadDir) -> Vec::<Pa
     result
 }
 
-fn build_tile_map(name: &str, directories: &Vec::<PathBuf>) -> Result<HashMap<String, SubSection>> {
+fn build_tile_map(name: &str, directories: &Vec<PathBuf>) -> Result<HashMap<String, SubSection>> {
     let mut tiles = HashMap::new();
     let color_key = Pixel::from(0, 255, 0, 255);
 
