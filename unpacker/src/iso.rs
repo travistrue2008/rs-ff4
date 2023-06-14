@@ -1,0 +1,71 @@
+use crate::error::{Result};
+
+use iso9660::{DirectoryEntry, ISO9660};
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+
+fn recreate_dir() -> Result<()> {
+	if Path::new("../iso").is_dir() {
+		std::fs::remove_dir_all("../iso")?;
+	}
+
+	std::fs::create_dir("../iso")?;
+
+	Ok(())
+}
+
+fn extract_file<P: AsRef<Path>>(
+	iso: &ISO9660<File>,
+	path: P,
+	filename: &str,
+) -> Result<()> {
+	let src_path = path
+		.as_ref()
+		.join(filename)
+		.into_os_string()
+		.into_string()
+		.unwrap();
+
+	let src_file = iso.open(&src_path)?
+		.expect(format!("Cannot open file: {:?}", src_path).as_str());
+
+	if let DirectoryEntry::File(file) = src_file {
+		println!("Extracting from ISO: {:?}", src_path);
+
+		let mut buffer = Vec::new();
+		let mut reader = file.read();
+
+		reader.read_to_end(&mut buffer)?;
+
+		let output_path = PathBuf::from("../iso")
+			.join(filename)
+			.into_os_string()
+			.into_string()
+			.unwrap();
+
+		let mut output_file = File::create(output_path)?;
+
+		output_file.write_all(&buffer)?;
+	};
+
+	Ok(())
+}
+
+fn extract_files_from_iso() -> Result<()> {
+	let iso_file = File::open("../ff4.iso").expect("'ff4.iso' not found at root");
+	let iso = ISO9660::new(iso_file)?;
+
+	extract_file(&iso, "./PSP_GAME/SYSDIR", "EBOOT.BIN")?;
+	extract_file(&iso, "./PSP_GAME/USRDIR", "PAC0.BIN")?;
+	extract_file(&iso, "./PSP_GAME/USRDIR", "PAC1.BIN")?;
+
+	Ok(())
+}
+
+pub fn process() -> Result<()> {
+	recreate_dir()?;
+	extract_files_from_iso()?;
+
+	Ok(())
+}
