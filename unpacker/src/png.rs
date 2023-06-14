@@ -19,8 +19,8 @@ pub fn write_png<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
 		Ok(image) => {
 			let frame = image.get_frame(0);
 			if !frame.has_mipmaps() {
-				let width = frame.width() as u32;
-				let height = frame.height() as u32;
+				let width = frame.header().width() as u32;
+				let height = frame.header().height() as u32;
 				let raw_pixels = frame.to_raw(Some(color_key));
 				let path = replace_ext(&path, "png")?;
 

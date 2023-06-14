@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = [
+    "game",
+    "tim2/cli",
+    "tim2/lib",
+    "unpacker",
+]

@@ -58,8 +58,8 @@ impl Texture {
 	pub fn from_image(device: &Device, layout: &BindGroupLayout, queue: &Queue, image: &Image) -> Texture {
 		let frame = image.get_frame(0);
 		let buffer = frame.to_raw(None);
-		let width = frame.width() as u32;
-		let height = frame.height() as u32;
+		let width = frame.header().width() as u32;
+		let height = frame.header().height() as u32;
 		let result = Self::new(device, layout, width, height);
 
 		result.write(queue, &buffer, Origin3d::ZERO, width, height);
