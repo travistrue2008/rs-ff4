@@ -9,10 +9,10 @@ use std::vec::Vec;
 
 const CHECKSUM_SIZE: usize = 32;
 
-pub type Children = Vec::<Node>;
-type Records = Vec::<Record>;
-type Infos = Vec::<Info>;
-type Names = HashMap::<usize, String>;
+pub type Children = Vec<Node>;
+type Records = Vec<Record>;
+type Infos = Vec<Info>;
+type Names = HashMap<usize, String>;
 
 #[derive(Debug)]
 enum InfoKind {

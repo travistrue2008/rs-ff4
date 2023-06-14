@@ -1,13 +1,11 @@
 use crate::error::{Result, Error};
 
 use byteorder::{ByteOrder, LittleEndian};
-use image::ColorType;
 use std::format;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::fs::File;
 use std::io::prelude::*;
-use tim2::Pixel;
 
 pub fn read_slice<'a>(buffer: &'a [u8], offset: &mut usize, length: usize) -> &'a [u8] {
     let start_index = *offset as usize;
@@ -88,28 +86,6 @@ pub fn replace_ext<P: AsRef<Path>>(path: P, ext: &str) -> Result<PathBuf> {
     let result = PathBuf::from(&raw);
 
     Ok(result)
-}
-
-pub fn write_png<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
-	let color_key = Pixel::from(0, 255, 0, 255);
-	let image_result = std::panic::catch_unwind(|| tim2::from_buffer(&buffer).unwrap());
-
-	match image_result {
-		Ok(image) => {
-			let frame = image.get_frame(0);
-			if !frame.has_mipmaps() {
-				let width = frame.width() as u32;
-				let height = frame.height() as u32;
-				let raw_pixels = frame.to_raw(Some(color_key));
-				let path = replace_ext(&path, "png")?;
-
-				image::save_buffer(path, &raw_pixels, width, height, ColorType::Rgba8).unwrap();
-			}
-		},
-		Err(_) => println!("WARNING: unable to transmute to PNG: {:?}", path.as_ref()),
-	}
-
-	Ok(())
 }
 
 pub fn write_file<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {

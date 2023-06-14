@@ -1,16 +1,17 @@
 use crate::error::{Result};
 
 use iso9660::{DirectoryEntry, ISO9660};
+use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 fn recreate_dir() -> Result<()> {
 	if Path::new("../iso").is_dir() {
-		std::fs::remove_dir_all("../iso")?;
+		fs::remove_dir_all("../iso")?;
 	}
 
-	std::fs::create_dir("../iso")?;
+	fs::create_dir("../iso")?;
 
 	Ok(())
 }

@@ -4,7 +4,7 @@ const THRESHOLD: usize = 2;
 const MAX_LENGTH: usize = 18;
 const WINDOW_SIZE: usize = 4096;
 
-pub fn decode(src: &[u8]) -> Result<Vec::<u8>> {
+pub fn decode(src: &[u8]) -> Result<Vec<u8>> {
     let src_len = src.len();
     let mut flags = 0u8;
     let mut f_pos = 0usize;
