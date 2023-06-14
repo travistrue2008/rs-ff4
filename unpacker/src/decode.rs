@@ -150,7 +150,7 @@ fn process_file(path: &Path) -> Result<()> {
 
 			write_file(path, &decoded)?;
 		},
-		_ => {},
+		_ => write_file(path, &buffer)?,
 	};
 
 	Ok(())
