@@ -24,7 +24,7 @@ impl DataKind {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Header {
 	total_size: u32,
 	palette_size: u32,
@@ -57,7 +57,7 @@ impl Header {
 			paletted: load_part(1)[0],
 			mipmap_count: load_part(1)[0],
 			clut_format: load_part(1)[0],
-			bpp: Header::find_bpp(load_part(1)[0])?,
+			bpp: Self::find_bpp(load_part(1)[0])?,
 			width: LittleEndian::read_u16(load_part(2)),
 			height: LittleEndian::read_u16(load_part(2)),
 			gs_tex_0: clone_into_array(load_part(8)),
@@ -202,18 +202,38 @@ impl Frame {
 		let pixel_size = header.bpp as usize / 8;
 		let size = header.image_size as usize;
 		let slice = get_slice(buffer, offset, size);
-		let data = if header.bpp == 4 {
-			let mut result = Vec::with_capacity(slice.len() * 2);
 
-			for index_pair in slice {
-				result.push(*index_pair & 0xF0 >> 4);
-				result.push(*index_pair & 0xF);
+		let data = if header.bpp == 4 {
+			let mut result = vec!(0; slice.len() * 2);
+
+			println!("--START--");
+
+			for (i, index_pair) in slice.iter().enumerate() {
+				let start_index = i * 2;
+
+				result[start_index + 0] = *index_pair & 0xF0 >> 4;
+				result[start_index + 1] = *index_pair & 0x0F;
+
+				print!("{:2} ", *index_pair);
 			}
+
+			println!("--END--");
 
 			result
 		} else {
 			slice.to_vec()
 		};
+
+		for y in 0..header.height() {
+			for x in 0..header.width() {
+				let index = (y * header.width() + x) as usize;
+				let value = data[index];
+
+				print!("{:2} ", value);
+			}
+
+			println!("");
+		}
 
 		if header.palette_size > 0 {
 			let raw = Frame::unswizzle(&data.to_vec(), header);
@@ -291,28 +311,30 @@ impl Frame {
 	}
 
 	fn unswizzle<T: Default + Copy>(buffer: &Vec<T>, header: &Header) -> Vec<T> {
-		let mut i = 0usize;
-		let mut result = vec![Default::default(); buffer.len()];
-		let width = header.width as usize;
-		let height = header.height as usize;
+		// let mut i = 0usize;
+		// let mut result = vec![Default::default(); buffer.len()];
+		// let width = header.width as usize;
+		// let height = header.height as usize;
 
-		for y in (0..height).step_by(SWIZZLE_HEIGHT) {
-			for x in (0..width).step_by(SWIZZLE_WIDTH) {
-				for tile_y in y..(y + SWIZZLE_HEIGHT) {
-					for tile_x in x..(x + SWIZZLE_WIDTH) {
-						if tile_x < width && tile_y < height {
-							let index = tile_y * width + tile_x;
+		// for y in (0..height).step_by(SWIZZLE_HEIGHT) {
+		// 	for x in (0..width).step_by(SWIZZLE_WIDTH) {
+		// 		for tile_y in y..(y + SWIZZLE_HEIGHT) {
+		// 			for tile_x in x..(x + SWIZZLE_WIDTH) {
+		// 				if tile_x < width && tile_y < height {
+		// 					let index = tile_y * width + tile_x;
 
-							result[index] = buffer[i];
-						}
+		// 					result[index] = buffer[i];
+		// 				}
 	
-						i += 1;
-					}
-				}
-			}
-		}
+		// 				i += 1;
+		// 			}
+		// 		}
+		// 	}
+		// }
 	
-		result
+		// result
+
+		buffer.to_vec()
 	}
 
 	pub fn header(&self) -> &Header {

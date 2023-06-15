@@ -89,10 +89,13 @@ fn build_tile_map(name: &str, directories: &Vec<PathBuf>) -> Result<HashMap<Stri
 
             for frame in image.frames() {
                 let raw = frame.to_raw(Some(color_key));
+                let width = frame.header().width() as usize;
+                let height = frame.header().height() as usize;
 
-                for y in 0..(frame.header().height() / TILE_SIZE) {
-                    for x in 0..(frame.header().width() / TILE_SIZE) {
-                        let section_buffer = get_sub_section(x, y, frame.header().width(), &raw);
+                for y in 0..(height / TILE_SIZE) {
+                    for x in 0..(width / TILE_SIZE) {
+                        let width = frame.header().width() as usize;
+                        let section_buffer = get_sub_section(x, y, width, &raw);
                         let hash = calc_hash(&section_buffer);
 
                         if !tiles.contains_key(&hash) {

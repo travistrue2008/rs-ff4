@@ -18,7 +18,8 @@ pub fn write_png<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
 	match image_result {
 		Ok(image) => {
 			let frame = image.get_frame(0);
-			if !frame.has_mipmaps() {
+
+			if !frame.header().has_mipmaps() {
 				let width = frame.header().width() as u32;
 				let height = frame.header().height() as u32;
 				let raw_pixels = frame.to_raw(Some(color_key));

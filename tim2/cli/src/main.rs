@@ -1,11 +1,9 @@
 use image::ColorType;
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::result;
-use tim2::{Image, Pixel};
-
-const COLOR_KEY: Pixel = Pixel::from(0, 255, 0, 255);
+use tim2::{Header, Image, Pixel};
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -27,26 +25,35 @@ impl From<tim2::Error> for Error {
 	}
 }
 
-pub fn write_png(img: &Image) -> Result<()> {
+pub fn write_png(path: &Path, img: &Image) -> Result<()> {
+	let color_key = Some(Pixel::from(0, 255, 0, 255));
 	let frame = img.get_frame(0);
 
-	if !frame.has_mipmaps() {
+	if !frame.header().has_mipmaps() {
 		let width = frame.header().width() as u32;
 		let height = frame.header().height() as u32;
-		let raw_pixels = frame.to_raw(Some(COLOR_KEY));
-		let path = replace_ext(&path, "png")?;
+		let raw_pixels = frame.to_raw(color_key);
+		let mut output_path = PathBuf::from(&path);
 
-		image::save_buffer(path, &raw_pixels, width, height, ColorType::Rgba8).unwrap();
+		output_path.set_extension("png");
+		image::save_buffer(output_path, &raw_pixels, width, height, ColorType::Rgba8).unwrap();
 	}
+
+	Ok(())
 }
 
 fn process_entry(path: &Path) -> Result<()> {
 	let img = tim2::load(path)?;
-	let frame_headers = 
 
-	println!("{:?} v{} frames:", path, img.frames().len());
+	let frame_headers: Vec<Header> = img
+		.frames()
+		.iter()
+		.map(|frame| frame.header().clone())
+		.collect();
 
-	write_png(&img)?;
+	println!("{:?} v{} frames: {:#?}", path, img.frames().len(), frame_headers);
+
+	write_png(&path, &img)?;
 
 	Ok(())
 }
@@ -55,7 +62,8 @@ fn main() {
 	fs::read_dir("../assets")
 		.unwrap()
 		.filter_map(|entry| entry.ok())
+		.filter(|entry| entry.path().extension().unwrap() == "tm2")
 		.for_each(|entry| {
-			process_entry(entry.path()).unwrap();
+			process_entry(&entry.path()).unwrap();
 		});
 }
