@@ -3,7 +3,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::result;
-use tim2::{Header, Image, Pixel};
+use tim2::{Frame, Pixel};
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -25,9 +25,8 @@ impl From<tim2::Error> for Error {
 	}
 }
 
-pub fn write_png(path: &Path, img: &Image) -> Result<()> {
+pub fn write_png(path: &Path, frame: &Frame) -> Result<()> {
 	let color_key = Some(Pixel::from(0, 255, 0, 255));
-	let frame = img.get_frame(0);
 
 	if !frame.header().has_mipmaps() {
 		let width = frame.header().width() as u32;
@@ -45,15 +44,20 @@ pub fn write_png(path: &Path, img: &Image) -> Result<()> {
 fn process_entry(path: &Path) -> Result<()> {
 	let img = tim2::load(path)?;
 
-	let frame_headers: Vec<Header> = img
-		.frames()
-		.iter()
-		.map(|frame| frame.header().clone())
-		.collect();
+	if img.frames().len() > 1 {
+		let stem = path.file_stem().unwrap().to_str().unwrap();
+		let ext = path.extension().unwrap().to_str().unwrap();
+		let mut path = PathBuf::from(path);
 
-	println!("{:?} v{} frames: {:#?}", path, img.frames().len(), frame_headers);
+		img.frames().iter().enumerate().for_each(|(i, frame)| {
+			let filename = format!("{}_{}.{}", stem, i, ext);
 
-	write_png(&path, &img)?;
+			path.set_file_name(filename);
+			write_png(&path, &frame).unwrap();
+		})
+	} else {
+		write_png(&path, &img.get_frame(0))?;
+	}
 
 	Ok(())
 }

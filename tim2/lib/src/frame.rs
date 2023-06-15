@@ -203,37 +203,21 @@ impl Frame {
 		let size = header.image_size as usize;
 		let slice = get_slice(buffer, offset, size);
 
-		let data = if header.bpp == 4 {
+		if header.bpp == 4 {
+			let raw = Frame::unswizzle(&slice.to_vec(), header);
 			let mut result = vec!(0; slice.len() * 2);
 
-			println!("--START--");
-
-			for (i, index_pair) in slice.iter().enumerate() {
+			for (i, index_pair) in raw.iter().enumerate() {
 				let start_index = i * 2;
 
-				result[start_index + 0] = *index_pair & 0xF0 >> 4;
-				result[start_index + 1] = *index_pair & 0x0F;
-
-				print!("{:2} ", *index_pair);
+				result[start_index + 0] = (*index_pair >> 0) & 0b1111;
+				result[start_index + 1] = (*index_pair >> 4) & 0b1111;
 			}
 
-			println!("--END--");
-
-			result
-		} else {
-			slice.to_vec()
-		};
-
-		for y in 0..header.height() {
-			for x in 0..header.width() {
-				let index = (y * header.width() + x) as usize;
-				let value = data[index];
-
-				print!("{:2} ", value);
-			}
-
-			println!("");
+			return Ok(DataKind::Indices(result));
 		}
+
+		let data = slice.to_vec();
 
 		if header.palette_size > 0 {
 			let raw = Frame::unswizzle(&data.to_vec(), header);
@@ -253,19 +237,21 @@ impl Frame {
 		let size = (header.color_entry_count * header.color_size() as u16) as usize;
 		let count = total_size / size;
 		let color_size = header.color_size() as usize;
-		let mut result = Vec::with_capacity(count);
+		let mut result = vec![PixelBuffer::default(); count];
 
 		for i in 0..count {
 			let start_index = size * i;
 			let end_index = start_index + size;
 			let data = &slice[start_index..end_index];
-			let mut palette = Frame::read_colors(data, color_size)?;
+			let original_palette = Frame::read_colors(data, color_size)?;
 
-			if !header.is_linear_palette() && header.bpp == 8 {
-				Frame::linearize_palette(&mut palette);
-			}
+			let palette = if !header.is_linear_palette() && header.bpp == 8 {
+				Frame::linearize_palette(&original_palette)
+			} else {
+				original_palette
+			};
 
-			result.push(palette);
+			result[i] = palette;
 		}
 
 		Ok(result)
@@ -285,14 +271,15 @@ impl Frame {
 		Ok(result)
 	}
 
-	fn linearize_palette(palette: &mut PixelBuffer) {
+	fn linearize_palette(palette: &PixelBuffer) -> PixelBuffer {
 		const COLOR_COUNT: usize = 8;
 		const BLOCK_COUNT: usize = 2;
 		const STRIPE_COUNT: usize = 2;
 
-		let mut i = 0usize;
 		let part_count = palette.len() / 32;
-		let original = palette.clone();
+
+		let mut i = 0usize;
+		let mut result = vec![Pixel::default(); palette.len()];
 
 		for part in 0..part_count {
 			for block in 0..BLOCK_COUNT {
@@ -302,39 +289,38 @@ impl Frame {
 						let i2 = block * COLOR_COUNT;
 						let i3 = stripe * STRIPE_COUNT * COLOR_COUNT;
 
-						palette[i] = original[i1 + i2 + i3 + color];
+						result[i] = palette[i1 + i2 + i3 + color];
 						i += 1;
 					}
 				}
 			}
 		}
+
+		result
 	}
 
 	fn unswizzle<T: Default + Copy>(buffer: &Vec<T>, header: &Header) -> Vec<T> {
-		// let mut i = 0usize;
-		// let mut result = vec![Default::default(); buffer.len()];
-		// let width = header.width as usize;
-		// let height = header.height as usize;
+		let bpp = header.bpp as usize;
+		let original_width = header.width() as usize * bpp / 8;
 
-		// for y in (0..height).step_by(SWIZZLE_HEIGHT) {
-		// 	for x in (0..width).step_by(SWIZZLE_WIDTH) {
-		// 		for tile_y in y..(y + SWIZZLE_HEIGHT) {
-		// 			for tile_x in x..(x + SWIZZLE_WIDTH) {
-		// 				if tile_x < width && tile_y < height {
-		// 					let index = tile_y * width + tile_x;
+		let mut i = 0usize;
+		let mut result = vec![T::default(); buffer.len()];
 
-		// 					result[index] = buffer[i];
-		// 				}
+		for y in (0..header.height as usize).step_by(SWIZZLE_HEIGHT) {
+			for x in (0..original_width).step_by(SWIZZLE_WIDTH) {
+				for tile_y in y..(y + SWIZZLE_HEIGHT) {
+					for tile_x in x..(x + SWIZZLE_WIDTH) {
+						if tile_x < original_width && tile_y < header.height as usize {
+							result[tile_y * original_width + tile_x] = buffer[i];
+						}
+
+						i += 1;
+					}
+				}
+			}
+		}
 	
-		// 				i += 1;
-		// 			}
-		// 		}
-		// 	}
-		// }
-	
-		// result
-
-		buffer.to_vec()
+		result
 	}
 
 	pub fn header(&self) -> &Header {

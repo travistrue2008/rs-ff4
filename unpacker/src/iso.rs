@@ -16,17 +16,8 @@ fn recreate_dir() -> Result<()> {
 	Ok(())
 }
 
-fn extract_file<P: AsRef<Path>>(
-	iso: &ISO9660<File>,
-	path: P,
-	filename: &str,
-) -> Result<()> {
-	let src_path = path
-		.as_ref()
-		.join(filename)
-		.into_os_string()
-		.into_string()
-		.unwrap();
+fn extract_file(iso: &ISO9660<File>, path: &str, filename: &str) -> Result<()> {
+	let src_path = format!("{}/{}", &path, &filename);
 
 	let src_file = iso.open(&src_path)?
 		.expect(format!("Cannot open file: {:?}", src_path).as_str());
