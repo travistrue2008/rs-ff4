@@ -42,6 +42,8 @@ pub fn write_png(path: &Path, frame: &Frame) -> Result<()> {
 }
 
 fn process_entry(path: &Path) -> Result<()> {
+	println!("Processing: {:?}", &path);
+
 	let img = tim2::load(path)?;
 
 	if img.frames().len() > 1 {
@@ -68,6 +70,9 @@ fn main() {
 		.filter_map(|entry| entry.ok())
 		.filter(|entry| entry.path().extension().unwrap() == "tm2")
 		.for_each(|entry| {
-			process_entry(&entry.path()).unwrap();
+			match process_entry(&entry.path()) {
+				Ok(_) => {},
+				Err(err) => println!("{:#?}", err),
+			};
 		});
 }
