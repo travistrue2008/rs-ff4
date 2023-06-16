@@ -29,7 +29,7 @@ impl Pixel {
 
 	pub fn from_buf(buf: &[u8]) -> Result<Pixel, Error> {
 		match buf.len() {
-			2 => {
+			2 => { // 16-bit: RGBA5551
 				let raw = ((buf[0] as u16) << 8) | buf[1] as u16;
 
 				Ok(Pixel {
@@ -39,19 +39,19 @@ impl Pixel {
 					a: if raw >> 15 == 1 { 255 } else { 0 },
 				})
 			},
-			3 => Ok(Pixel {
+			3 => Ok(Pixel { // 24-bit: RGB8
 				r: buf[0],
 				g: buf[1],
 				b: buf[2],
 				a: 255,
 			}),
-			4 => Ok(Pixel {
+			4 => Ok(Pixel { // 32-bit: RGBA8
 				r: buf[0],
 				g: buf[1],
 				b: buf[2],
 				a: buf[3],
 			}),
-			n => Err(Error::InvalidRange(n)),
+			n => Err(Error::InvalidPixelSize(n)),
 		}
 	}
 
