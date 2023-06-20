@@ -1,0 +1,138 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'game'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=game",
+          "--package=game"
+        ],
+        "filter": {
+          "name": "game",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/game"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'game'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=game",
+          "--package=game"
+        ],
+        "filter": {
+          "name": "game",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/game"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'tim2'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=tim2"
+        ],
+        "filter": {
+          "name": "tim2",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/tim2/lib"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'tim2/cli'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=cli",
+          "--package=cli"
+        ],
+        "filter": {
+          "name": "cli",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/tim2/cli"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'tim2/cli'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=cli",
+          "--package=cli"
+        ],
+        "filter": {
+          "name": "cli",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/tim2/cli"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'unpacker'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=unpacker",
+          "--package=unpacker"
+        ],
+        "filter": {
+          "name": "unpacker",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/unpacker"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'unpacker'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=unpacker",
+          "--package=unpacker"
+        ],
+        "filter": {
+          "name": "unpacker",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}/unpacker"
+    }
+  ]
+}
