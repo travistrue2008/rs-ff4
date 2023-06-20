@@ -1,5 +1,5 @@
 use crate::common::*;
-use crate::error::Error;
+use crate::error::{Error, Result};
 use crate::pixel::{Format, Pixel};
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -27,11 +27,11 @@ impl DataKind {
 #[derive(Clone, Debug)]
 pub struct Header {
 	total_size: u32,
-	palette_size: u32,
+	clut_size: u32,
 	image_size: u32,
 	header_size: u16,
-	color_entry_count: u16,
-	paletted: u8,
+	clut_color_count: u16,
+	picture_format: u8,
 	mipmap_count: u8,
 	clut_format: u8,
 	bpp: u8,
@@ -39,47 +39,40 @@ pub struct Header {
 	height: u16,
 	gs_regs: u32,
 	gs_tex_clut: u32,
-	gs_tex_0: [u8;8],
-	gs_tex_1: [u8;8],
-	user_data: Vec<u8>,
+	gs_tex_0: u64,
+	gs_tex_1: u64,
 }
 
 impl Header {
-	pub fn read(buffer: &[u8], offset: &mut usize) -> Result<Header, Error> {
+	pub fn read(buffer: &[u8], offset: &mut usize) -> Result<Header> {
 		let mut load_part = |size| { get_slice(&buffer, offset, size) };
 	
-		let mut result = Header {
+		let result = Header {
 			total_size: LittleEndian::read_u32(load_part(4)),
-			palette_size: LittleEndian::read_u32(load_part(4)),
+			clut_size: LittleEndian::read_u32(load_part(4)),
 			image_size: LittleEndian::read_u32(load_part(4)),
 			header_size: LittleEndian::read_u16(load_part(2)),
-			color_entry_count: LittleEndian::read_u16(load_part(2)),
-			paletted: load_part(1)[0],
+			clut_color_count: LittleEndian::read_u16(load_part(2)),
+			picture_format: load_part(1)[0],
 			mipmap_count: load_part(1)[0],
 			clut_format: load_part(1)[0],
 			bpp: Self::find_bpp(load_part(1)[0])?,
 			width: LittleEndian::read_u16(load_part(2)),
 			height: LittleEndian::read_u16(load_part(2)),
-			gs_tex_0: clone_into_array(load_part(8)),
-			gs_tex_1: clone_into_array(load_part(8)),
+			gs_tex_0: LittleEndian::read_u64(load_part(8)),
+			gs_tex_1: LittleEndian::read_u64(load_part(8)),
 			gs_regs: LittleEndian::read_u32(load_part(4)),
 			gs_tex_clut: LittleEndian::read_u32(load_part(4)),
-			user_data: Vec::new(),
 		};
 
-		let user_data_size = result.header_size as usize - 48;
-		if user_data_size > 0 {
-			result.user_data = load_part(user_data_size).to_vec();
-		}
-
-		if result.palette_size > 0 && result.bpp > 8 {
+		if result.is_paletted() && result.bpp > 8 {
 			Err(Error::TrueColorAndPaletteFound)
 		} else {
 			Ok(result)
 		}
 	}
 
-	fn find_bpp(v: u8) -> Result<u8, Error> {
+	fn find_bpp(v: u8) -> Result<u8> {
 		match v {
 			1 => Ok(16),
 			2 => Ok(24),
@@ -94,8 +87,16 @@ impl Header {
 		self.mipmap_count > 1
 	}
 
-	pub fn is_linear_palette(&self) -> bool {
+	pub fn is_paletted(&self) -> bool {
+		self.clut_size > 0
+	}
+
+	pub fn is_palette_linear(&self) -> bool {
 		self.clut_format & 0x80 != 0
+	}
+
+	pub fn is_swizzled(&self) -> bool {
+		self.picture_format > 0
 	}
 
 	pub fn color_size(&self) -> u8 {
@@ -106,7 +107,7 @@ impl Header {
 		}
 	}
 
-	pub fn pixel_format(&self) -> Result<Format, Error> {
+	pub fn pixel_format(&self) -> Result<Format> {
 		match self.bpp {
 			4 => Ok(Format::Indexed),
 			8 => Ok(Format::Indexed),
@@ -121,8 +122,8 @@ impl Header {
 		self.total_size
 	}
 
-	pub fn palette_size(&self) -> u32 {
-		self.palette_size
+	pub fn clut_size(&self) -> u32 {
+		self.clut_size
 	}
 
 	pub fn image_size(&self) -> u32 {
@@ -133,12 +134,12 @@ impl Header {
 		self.header_size
 	}
 
-	pub fn color_entry_count(&self) -> u16 {
-		self.color_entry_count
+	pub fn clut_color_count(&self) -> u16 {
+		self.clut_color_count
 	}
 
-	pub fn paletted(&self) -> u8 {
-		self.paletted
+	pub fn picture_format(&self) -> u8 {
+		self.picture_format
 	}
 
 	pub fn mipmap_count(&self) -> u8 {
@@ -169,16 +170,47 @@ impl Header {
 		self.gs_tex_clut
 	}
 
-	pub fn gs_tex_0(&self) -> [u8;8] {
+	pub fn gs_tex_0(&self) -> u64 {
 		self.gs_tex_0
 	}
 
-	pub fn gs_tex_1(&self) -> [u8;8] {
+	pub fn gs_tex_1(&self) -> u64 {
 		self.gs_tex_1
 	}
+}
 
-	pub fn user_data(&self) -> &Vec<u8> {
-		&self.user_data
+#[derive(Debug)]
+pub struct MipmapHeader {
+	gs_miptbp1: u64,
+	gs_miptbp2: u64,
+	sizes: Vec<u32>,
+}
+
+impl MipmapHeader {
+	fn read(buffer: &[u8], offset: &mut usize) -> MipmapHeader {
+		let mut load_part = |size| { get_slice(&buffer, offset, size) };
+
+		let gs_miptbp1 = LittleEndian::read_u64(load_part(8));
+		let gs_miptbp2 = LittleEndian::read_u64(load_part(8));
+		let sizes = Vec::new();
+	
+		MipmapHeader {
+			gs_miptbp1,
+			gs_miptbp2,
+			sizes,
+		}
+	}
+
+	pub fn gs_miptbp1(&self) -> u64 {
+		self.gs_miptbp1
+	}
+
+	pub fn gs_miptbp2(&self) -> u64 {
+		self.gs_miptbp2
+	}
+
+	pub fn sizes(&self) -> &Vec<u32> {
+		&self.sizes
 	}
 }
 
@@ -186,69 +218,100 @@ impl Header {
 pub struct Frame {
 	header: Header,
 	data: DataKind,
-	palettes: Vec<PixelBuffer>,
+	user_data: Vec<u8>,
+	mipmap_header: Option<MipmapHeader>,
+	palettes: Option<Vec<PixelBuffer>>,
 }
 
 impl Frame {
-	pub fn read(buffer: &[u8], offset: &mut usize) -> Result<Frame, Error> {
+	pub fn read(buffer: &[u8], offset: &mut usize) -> Result<Frame> {
 		let header = Header::read(buffer, offset)?;
-		let data = Frame::read_data(buffer, offset, &header)?;
-		let palettes= Frame::read_palettes(buffer, offset, &header)?;
 
-		Ok(Frame { header, data, palettes })
-	}
-
-	fn read_data(buffer: &[u8], offset: &mut usize, header: &Header) -> Result<DataKind, Error> {
-		let pixel_size = header.bpp as usize / 8;
-		let size = header.image_size as usize;
-		let slice = get_slice(buffer, offset, size);
-
-		if header.bpp == 4 {
-			let raw = Frame::unswizzle(&slice.to_vec(), header);
-			let mut result = vec!(0; slice.len() * 2);
-
-			for (i, index_pair) in raw.iter().enumerate() {
-				let start_index = i * 2;
-
-				result[start_index + 0] = (*index_pair >> 0) & 0b1111;
-				result[start_index + 1] = (*index_pair >> 4) & 0b1111;
-			}
-
-			return Ok(DataKind::Indices(result));
+		if header.has_mipmaps() {
+			return Err(Error::MipmapsUnimplemented);
 		}
 
-		let data = slice.to_vec();
+		let mipmap_header = if header.mipmap_count > 1 {
+			Some(MipmapHeader::read(buffer, offset))
+		} else {
+			None
+		};
 
-		if header.palette_size > 0 {
-			let raw = Frame::unswizzle(&data.to_vec(), header);
+		let user_data_size = header.header_size as usize - 48;
 
-			Ok(DataKind::Indices(raw))
+		let user_data = if user_data_size > 0 {
+			get_slice(&buffer, offset, user_data_size).to_vec()
+		} else {
+			Vec::new()
+		};
+
+		let data = Frame::read_data(buffer, offset, &header)?;
+
+		let palettes= if header.is_paletted() {
+			Some(Frame::read_palettes(buffer, offset, &header)?)
+		} else {
+			None
+		};
+
+		Ok(Frame {
+			header,
+			data,
+			user_data,
+			mipmap_header,
+			palettes,
+		})
+	}
+
+	fn read_data(buffer: &[u8], offset: &mut usize, header: &Header) -> Result<DataKind> {
+		let pixel_size = header.bpp as usize / 8;
+		let size = header.image_size as usize;
+		let data = get_slice(buffer, offset, size).to_vec();
+
+		if header.is_paletted() {
+			let raw = Frame::unswizzle(&data, header)?;
+
+			let result = if header.bpp == 4 {
+				let mut result = vec!(0; data.len() * 2);
+	
+				for (i, index_pair) in raw.iter().enumerate() {
+					let start_index = i * 2;
+	
+					result[start_index + 0] = (*index_pair >> 0) & 0b1111;
+					result[start_index + 1] = (*index_pair >> 4) & 0b1111;
+				}
+	
+				result
+			} else {
+				raw
+			};
+
+			Ok(DataKind::Indices(result))
 		} else {
 			let colors = Frame::read_colors(&data, pixel_size)?;
-			let raw = Frame::unswizzle(&colors, header);
+			let raw = Frame::unswizzle(&colors, header)?;
 
 			Ok(DataKind::Pixels(raw))
 		}
 	}
 
-	fn read_palettes(buffer: &[u8], offset: &mut usize, header: &Header) -> Result<Vec<PixelBuffer>, Error> {
-		let total_size = header.palette_size as usize;
-		let slice = get_slice(buffer, offset, total_size);
-		let size = (header.color_entry_count * header.color_size() as u16) as usize;
+	fn read_palettes(buffer: &[u8], offset: &mut usize, header: &Header) -> Result<Vec<PixelBuffer>> {
+		let total_size = header.clut_size as usize;
+		let size = (header.clut_color_count * header.color_size() as u16) as usize;
 		let count = total_size / size;
 		let color_size = header.color_size() as usize;
+		let slice = get_slice(buffer, offset, total_size);
 		let mut result = vec![PixelBuffer::default(); count];
 
 		for i in 0..count {
 			let start_index = size * i;
 			let end_index = start_index + size;
 			let data = &slice[start_index..end_index];
-			let original_palette = Frame::read_colors(data, color_size)?;
+			let palette = Frame::read_colors(data, color_size)?;
 
-			let palette = if !header.is_linear_palette() && header.bpp == 8 {
-				Frame::linearize_palette(&original_palette)
+			let palette = if !header.is_palette_linear() && header.bpp == 8 {
+				Frame::linearize_palette(&palette)
 			} else {
-				original_palette
+				palette
 			};
 
 			result[i] = palette;
@@ -257,7 +320,7 @@ impl Frame {
 		Ok(result)
 	}
 
-	fn read_colors(buffer: &[u8], color_size: usize) -> Result<PixelBuffer, Error> {
+	fn read_colors(buffer: &[u8], color_size: usize) -> Result<PixelBuffer> {
 		let mut offset = 0usize;
 		let mut result = Vec::new();
 
@@ -299,11 +362,15 @@ impl Frame {
 		result
 	}
 
-	fn unswizzle<T: Default + Copy>(buffer: &Vec<T>, header: &Header) -> Vec<T> {
+	fn unswizzle<T: Default + Copy>(buffer: &Vec<T>, header: &Header) -> Result<Vec<T>> {
+		if !header.is_swizzled() {
+			return Ok(buffer.to_vec());
+		}
+
 		let bpp = header.bpp as usize;
 		let original_width = header.width() as usize * bpp / 8;
 
-		let mut i = 0usize;
+		let mut src_index = 0usize;
 		let mut result = vec![T::default(); buffer.len()];
 
 		for y in (0..header.height as usize).step_by(SWIZZLE_HEIGHT) {
@@ -311,20 +378,47 @@ impl Frame {
 				for tile_y in y..(y + SWIZZLE_HEIGHT) {
 					for tile_x in x..(x + SWIZZLE_WIDTH) {
 						if tile_x < original_width && tile_y < header.height as usize {
-							result[tile_y * original_width + tile_x] = buffer[i];
-						}
+							let dst_index = tile_y * original_width + tile_x;
 
-						i += 1;
+							let src = buffer
+								.get(src_index)
+								.ok_or(Error::InvalidSwizzleSrcIndex(
+									src_index,
+									tile_x,
+									tile_y,
+									Box::new(header.clone()),
+								))?;
+
+							let dst = result
+								.get_mut(dst_index)
+								.ok_or(Error::InvalidSwizzleDstIndex(
+									dst_index,
+									tile_x,
+									tile_y,
+									Box::new(header.clone()),
+								))?;
+
+							*dst = *src;
+							src_index += 1;
+						}
 					}
 				}
 			}
 		}
 	
-		result
+		Ok(result)
 	}
 
 	pub fn header(&self) -> &Header {
 		&self.header
+	}
+
+	pub fn user_data(&self) -> &Vec<u8> {
+		&self.user_data
+	}
+
+	pub fn mipmap_header(&self) -> &Option<MipmapHeader> {
+		&self.mipmap_header
 	}
 
 	pub fn data(&self) -> &DataKind {
@@ -332,10 +426,10 @@ impl Frame {
 	}
 
 	pub fn get_pixels(&self) -> PixelBuffer {
-		let palette = &self.palettes[0];
-
 		match &self.data {
 			DataKind::Indices(v) => {
+				let palettes = self.palettes.as_ref().unwrap();
+				let palette = &palettes[0];
 				let mut result = Vec::with_capacity(v.len());
 
 				for index in v {

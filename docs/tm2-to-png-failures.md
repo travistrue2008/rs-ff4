@@ -10,8 +10,14 @@ Below is a list of files that have failed to be converted to PNGs. This could be
 ### Index Out-of-Range (Panics)
 
 /data/battle/TheAfterCommon/btl_system_06.tm2
+/data/CN_lunar_subterrane2_char/fChara_139.tm2
 /data/CN_baron_castle1_char/fChara_279.tm2
+/data/CN_lunar_subterrane3_char/fChara_139.tm2
 /data/SampleMenu/formationchkline.tm2
+/data/CN_lunar_subterrane4_char/fChara_139.tm2
+/data/CN_lunar_subterrane5_char/fChara_139.tm2
+/data/menu/zukan/msd_089.tm2.tm2
+/data/menu/zukan/msd_089b.tm2.tm2
 /data/menu/menu_gallery_pic/image_panel003.tm2
 /data/menu/menu_gallery_pic/image_panel017.tm2
 /data/menu/menu_gallery_pic/image_panel016.tm2
@@ -114,6 +120,7 @@ Below is a list of files that have failed to be converted to PNGs. This could be
 /data/menu/menu_gallery_pic/image_panel026.tm2
 /data/game_common/em_black_hole00.tm2
 /data/game_common/em_black_hole00_Glow.tm2
+/data/CN_lunar_subterrane1_2_char/fChara_139.tm2
 /data/event/evtta_yan/TA_fChara_033_0.tm2
 /data/event/evtta_endD/ta_effect_11.tm2
 /data/event/evtta_endD/TA_fChara_051_0.tm2
@@ -128,27 +135,4 @@ Below is a list of files that have failed to be converted to PNGs. This could be
 /data/event/evtta_endA/ta_effect_01.tm2
 /data/event/evtta_endA/TA_fChara_052_0.tm2
 /data/CN_baron_castle2_char/fChara_279.tm2
-
-### Divide By Zero (Panics)
-
-/data/menu/zukan/msd_089.tm2.tm2
-/data/menu/zukan/msd_089b.tm2.tm2
-
-### Interlacing Distortion
-
-/data/battle/00ta_mon/ms_283.tm2
-/data/battle/00ta_mon/ms_284.tm2
-/data/battle/00ta_mon/ms_285.tm2
-/data/battle/00ta_mon/ms_286.tm2
-/data/battle/00ta_mon/ms_314.tm2
-/data/battle/00ta_mon/ms_398.tm2
-/data/battle/08ta_mon/ms_335.tm2
-/data/battle/08ta_mon/ms_388.tm2
-/data/battle/08ta_mon/ms_389.tm2
-/data/battle/08ta_mon/ms_390.tm2
-/data/battle/08ta_mon/ms_391.tm2
-/data/battle/08ta_mon/ms_392.tm2
-/data/battle/08ta_mon/ms_426.tm2
-/data/battle/08ta_mon/ms_427.tm2
-/data/battle/08ta_mon/ms_430.tm2
-/data/battle/08ta_mon/ms_431.tm2
+/data/CN_lunar_subterrane1_char/fChara_139.tm2

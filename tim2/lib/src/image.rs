@@ -11,7 +11,8 @@ const IDENT: u32 = 0x54494d32;
 
 #[derive(Debug)]
 struct Header {
-	version: u16,
+	version: u8,
+	align: u8,
 	count: usize,
 }
 
@@ -19,16 +20,21 @@ impl Header {
 	fn read(buffer: &[u8], offset: &mut usize) -> Result<Header, Error> {
 		let mut load_part = |size| { get_slice(&buffer, offset, size) };
 		let identifier = BigEndian::read_u32(load_part(4));
-		let version = LittleEndian::read_u16(load_part(2));
+		let version = load_part(1)[0];
+		let align = load_part(1)[0];
 		let count = LittleEndian::read_u16(load_part(2)) as usize;
 
-		load_part(8);
+		load_part(8); // skip over unused data
 
 		if identifier != IDENT {
 			return Err(Error::InvalidIdentifier(identifier))
 		}
 
-		Ok(Header { version, count })
+		if align != 0x00 && align != 0x01 {
+			return Err(Error::InvalidAlignment(align))
+		}
+
+		Ok(Header { version, align, count })
 	}
 }
 
@@ -50,8 +56,12 @@ impl Image {
 		Ok(Image { header, frames })
 	}
 
-	pub fn version(&self) -> u16 {
+	pub fn version(&self) -> u8 {
 		self.header.version
+	}
+
+	pub fn align(&self) -> u8 {
+		self.header.align
 	}
 
 	pub fn frames(&self) -> &Vec<Frame> {
@@ -110,5 +120,6 @@ pub fn load<P: AsRef<Path>>(path: P) -> Result<Image, Error> {
 	let mut file = File::open(path)?;
 
 	file.read_to_end(&mut buffer)?;
+
 	Image::read(&buffer, &mut offset)
 }

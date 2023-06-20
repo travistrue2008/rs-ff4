@@ -28,6 +28,10 @@ impl From<tim2::Error> for Error {
 pub fn write_png(path: &Path, frame: &Frame) -> Result<()> {
 	let color_key = Some(Pixel::from(0, 255, 0, 255));
 
+	if frame.header().has_mipmaps() {
+		println!("MIPMAPS: {:?}", &path);
+	}
+
 	if !frame.header().has_mipmaps() {
 		let width = frame.header().width() as u32;
 		let height = frame.header().height() as u32;
