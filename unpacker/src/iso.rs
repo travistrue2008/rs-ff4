@@ -1,20 +1,10 @@
-use crate::error::{Result};
+use crate::common::*;
+use crate::error::Result;
 
 use iso9660::{DirectoryEntry, ISO9660};
-use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-
-fn recreate_dir() -> Result<()> {
-	if Path::new("../iso").is_dir() {
-		fs::remove_dir_all("../iso")?;
-	}
-
-	fs::create_dir("../iso")?;
-
-	Ok(())
-}
 
 fn extract_file(iso: &ISO9660<File>, path: &str, filename: &str) -> Result<()> {
 	let src_path = format!("{}/{}", &path, &filename);
@@ -56,7 +46,7 @@ fn extract_files_from_iso() -> Result<()> {
 pub fn process() -> Result<()> {
 	println!("Extracting from ISO...");
 
-	recreate_dir()?;
+	recreate_dir(Path::new("../iso"))?;
 	extract_files_from_iso()?;
 
 	Ok(())

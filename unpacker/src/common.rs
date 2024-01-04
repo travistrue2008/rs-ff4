@@ -1,11 +1,21 @@
 use crate::error::{Result, Error};
 
 use byteorder::{ByteOrder, LittleEndian};
-use std::format;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::fs::File;
 use std::io::prelude::*;
+
+pub fn recreate_dir(path: &Path) -> Result<()> {
+	if Path::new(path).is_dir() {
+		fs::remove_dir_all(path)?;
+	}
+
+	fs::create_dir(path)?;
+
+	Ok(())
+}
 
 pub fn read_slice<'a>(buffer: &'a [u8], offset: &mut usize, length: usize) -> &'a [u8] {
     let start_index = *offset as usize;
@@ -25,6 +35,16 @@ pub fn read_u32(buffer: &[u8], offset: &mut usize) -> u32 {
     let slice = read_slice(buffer, offset, 4);
 
     LittleEndian::read_u32(slice)
+}
+
+pub fn clone_into_array<A, T>(slice: &[T]) -> A
+    where A: Sized + Default + AsMut<[T]>,
+          T: Clone
+{
+    let mut a = Default::default();
+	<A as AsMut<[T]>>::as_mut(&mut a).clone_from_slice(slice);
+
+    a
 }
 
 pub fn read_str(buffer: &[u8], offset: &mut usize, size: usize) -> String {
@@ -47,16 +67,6 @@ pub fn read_str(buffer: &[u8], offset: &mut usize, size: usize) -> String {
     String::from(String::from(result).trim())
 }
 
-pub fn clone_into_array<A, T>(slice: &[T]) -> A
-    where A: Sized + Default + AsMut<[T]>,
-          T: Clone
-{
-    let mut a = Default::default();
-	<A as AsMut<[T]>>::as_mut(&mut a).clone_from_slice(slice);
-
-    a
-}
-
 pub fn get_base_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
     let buf = path.as_ref();
 
@@ -75,15 +85,6 @@ pub fn remove_ext<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
     let raw_stem = path.as_ref().file_stem().unwrap().to_str().unwrap();
     let stem = Path::new(raw_stem);
     let result = base.join(stem);
-
-    Ok(result)
-}
-
-pub fn replace_ext<P: AsRef<Path>>(path: P, ext: &str) -> Result<PathBuf> {
-    let ext_buf = remove_ext(path)?;
-    let base = ext_buf.to_str().unwrap();
-    let raw = format!("{}.{}", base, ext);
-    let result = PathBuf::from(&raw);
 
     Ok(result)
 }
