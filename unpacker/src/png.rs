@@ -26,9 +26,6 @@ fn write_png(path: &Path, buffer: &[u8]) -> Result<()> {
 	let img = tim2::from_buffer(&buffer)?;
 	let frame = img.get_frame(0);
 
-	if !frame.header().is_paletted() {
-		println!("Truecolor found: {:?} bpp: {}", path, frame.header().bpp());
-	}
 
 	if !frame.header().has_mipmaps() {
 		let width = frame.header().width() as u32;
