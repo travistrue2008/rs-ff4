@@ -7,7 +7,8 @@ use std::path::Path;
 use std::str;
 use walkdir::WalkDir;
 
-static PATH_OUTPUT: &str = "../iso/extracted";
+static PATH_INPUT: &str = "../iso/extracted";
+static PATH_OUTPUT: &str = "../iso/decoded";
 
 fn has_tm2_header(slice: &[u8]) -> bool {
 	if let Ok(header) = str::from_utf8(&slice) {
@@ -85,7 +86,7 @@ fn write_entry<P: AsRef<Path>>(path: P, buffer: &[u8], entry: &FileEntry) -> Res
 			let mut path = path.as_ref().join(&entry.name);
 
 			if decoded.len() > 4 && has_tm2_header(&decoded[0..4]) {
-				path = replace_ext(path, "tm2")?;
+				path.set_extension("tm2");
 			}
 
 			write_file(path, &decoded)
@@ -137,20 +138,27 @@ pub fn extract_files<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
 
 fn process_file(path: &Path) -> Result<()> {
 	let ext = path.extension().unwrap().to_str().unwrap();
+	let output_path = path.to_str().unwrap().replace(PATH_INPUT, PATH_OUTPUT);
+	let output_path = Path::new(&output_path);
+	
 	let buffer = fs::read(path)?;
+
+	if !output_path.parent().unwrap().exists() {
+		fs::create_dir_all(output_path.parent().unwrap()).unwrap();
+	}
 
 	match ext {
 		"lzs" => {
 			let decoded = lzss::decode(&buffer[4..])?;
 
-			extract_files(path, &decoded)?;
+			extract_files(output_path, &decoded)?;
 		},
 		"tm2" => {
 			let decoded = decode_buffer(&buffer)?;
 
-			write_file(path, &decoded)?;
+			write_file(output_path, &decoded)?;
 		},
-		_ => write_file(path, &buffer)?,
+		_ => write_file(output_path, &buffer)?,
 	};
 
 	Ok(())
@@ -159,7 +167,7 @@ fn process_file(path: &Path) -> Result<()> {
 pub fn process() -> Result<()> {
 	println!("Decoding files...");
 
-	for entry in WalkDir::new(PATH_OUTPUT) {
+	for entry in WalkDir::new(PATH_INPUT) {
 		let entry = entry?;
 
 		if entry.metadata()?.is_file() {

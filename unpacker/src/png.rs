@@ -7,7 +7,7 @@ use std::str;
 use tim2::Pixel;
 use walkdir::WalkDir;
 
-static PATH_EXTRACTED: &str = "../iso/extracted";
+static PATH_DECODED: &str = "../iso/decoded";
 static PATH_OUTPUT: &str = "../iso/images";
 static PATH_ERRORS: &str = "../iso/images/errors";
 
@@ -54,9 +54,8 @@ fn has_tm2_extension(entry: &walkdir::DirEntry) -> bool {
 
 fn process_entry(entry: &walkdir::DirEntry) {
 	let input_path = entry.path();
-	let output_path = input_path.to_str().unwrap().replace(PATH_EXTRACTED, PATH_OUTPUT);
+	let output_path = input_path.to_str().unwrap().replace(PATH_DECODED, PATH_OUTPUT);
 	let output_path = Path::new(&output_path);
-
 	let buffer = fs::read(&input_path).unwrap();
 
 	if !output_path.parent().unwrap().exists() {
@@ -83,7 +82,7 @@ pub fn process() -> Result<()> {
 	recreate_dir(PATH_OUTPUT)?;
 	recreate_dir(PATH_ERRORS)?;
 
-	WalkDir::new(PATH_EXTRACTED)
+	WalkDir::new(PATH_DECODED)
 		.into_iter()
 		.filter(|entry| entry.is_ok())
 		.map(|entry| entry.unwrap())

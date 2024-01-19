@@ -189,7 +189,7 @@ impl Metadata {
 			let name = &names[&info.filename_offset];
 			let filename = String::from(name);
 
-			println!("{}: {:#X?}", filename, info.sha_256);
+			// println!("{}: {:#X?}", filename, info.sha_256);
 
 			children.push(match info.kind {
 				InfoKind::File => Node::File(filename, info.file_offset, info.file_real_size),
