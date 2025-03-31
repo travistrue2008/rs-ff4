@@ -1,7 +1,9 @@
 use crate::error::{Result, Error};
 
 use byteorder::{ByteOrder, LittleEndian};
-use std::format;
+use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str;
 
@@ -77,11 +79,23 @@ pub fn remove_ext<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
     Ok(result)
 }
 
-pub fn replace_ext<P: AsRef<Path>>(path: P, ext: &str) -> Result<PathBuf> {
-    let ext_buf = remove_ext(path)?;
-    let base = ext_buf.to_str().unwrap();
-    let raw = format!("{}.{}", base, ext);
-    let result = PathBuf::from(&raw);
+pub fn write_file<P: AsRef<Path>>(path: P, buffer: &[u8]) -> Result<()> {
+	let mut pos = 0usize;
+	let mut file = File::create(&path)?;
 
-    Ok(result)
+	while pos < buffer.len() {
+		pos += file.write(&buffer[pos..])?;
+	}
+
+	Ok(())
+}
+
+pub fn recreate_dir(path: &Path) -> Result<()> {
+	if Path::new(path).is_dir() {
+		fs::remove_dir_all(path)?;
+	}
+
+	fs::create_dir(path)?;
+
+	Ok(())
 }

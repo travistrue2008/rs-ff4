@@ -2,18 +2,16 @@ use crate::common::*;
 use crate::error::{Result, Error};
 
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::Path;
+use std::fs;
 use std::str;
 use std::vec::Vec;
 
 const CHECKSUM_SIZE: usize = 32;
 
-pub type Children = Vec::<Node>;
-type Records = Vec::<Record>;
-type Infos = Vec::<Info>;
-type Names = HashMap::<usize, String>;
+pub type Children = Vec<Node>;
+type Records = Vec<Record>;
+type Infos = Vec<Info>;
+type Names = HashMap<usize, String>;
 
 #[derive(Debug)]
 enum InfoKind {
@@ -39,6 +37,7 @@ impl Header {
 		};
 
 		read_slice(buffer, offset, 0x10);
+
 		header
 	}
 }
@@ -89,7 +88,7 @@ struct Info {
 
 impl Info {
 	fn read(buffer: &[u8], offset: &mut usize) -> Info {
-		read_slice(buffer, offset, 0x2);
+		read_slice(buffer, offset, 2);
 
 		let kind = if read_u16(buffer, offset) == 1 {
 			InfoKind::File
@@ -101,7 +100,8 @@ impl Info {
 		let filename_length = read_u32(buffer, offset) as usize;
 		let file_offset = read_u32(buffer, offset) as usize;
 		let file_real_size = read_u32(buffer, offset) as usize;
-		read_slice(buffer, offset, 0x4);
+
+		read_slice(buffer, offset, 4);
 
 		let record_id = read_u32(buffer, offset);
 		let file_full_size = read_u32(buffer, offset) as usize;
@@ -133,40 +133,35 @@ pub struct Metadata {
 }
 
 impl Metadata {
-	pub fn load<P: AsRef<Path>>(path: P) -> Result<Metadata> {
+	pub fn load() -> Result<Metadata> {
 		let mut offset = 0usize;
-		let mut buffer = Vec::new();
-		let mut file = File::open(path).expect("Index file not found");
+		let buffer = fs::read("../iso/PAC0.BIN").expect("PAC0.BIN not found");
+		let header = Header::read(&buffer, &mut offset);
 
-		file.read_to_end(&mut buffer)?;
-		Metadata::read(&buffer, &mut offset)
-	}
-
-	fn read(buffer: &[u8], offset: &mut usize) -> Result<Metadata> {
-		let header = Header::read(&buffer, offset);
 		let mut record_index = 0usize;
 
-		let mut records = Vec::with_capacity(header.record_count);
-		for _ in 0..header.record_count {
-			records.push(Record::read(buffer, offset));
-		}
+		let records: Vec<Record> = (0..header.record_count)
+			.into_iter()
+			.map(|_| Record::read(&buffer, &mut offset))
+			.collect();
 
-		let mut infos = Vec::with_capacity(header.file_count);
-		for _ in 0..header.file_count {
-			infos.push(Info::read(buffer, offset));
-		}
+		let infos: Vec<Info> = (0..header.file_count)
+			.into_iter()
+			.map(|_| Info::read(&buffer, &mut offset))
+			.collect();
 
-		let names = Metadata::build_filenames(&buffer, offset, header.name_table_size, &infos);
+		let names = Self::build_filenames(&buffer, &mut offset, header.name_table_size, &infos);
 
 		Ok(Metadata {
 			header,
-			root: Metadata::build_directory(String::from("data"), &mut record_index, &records, &infos, &names),
+			root: Self::build_directory(String::from("data"), &mut record_index, &records, &infos, &names),
 		})
 	}
 
 	fn build_filenames(buffer: &[u8], offset: &mut usize, size: usize, infos: &Infos) -> Names {
 		let end_index = *offset + size;
 		let name_buf = &buffer[*offset..end_index];
+
 		let result = infos.iter().map(|info| {
 			let start_index = info.filename_offset as usize;
 			let end_index = start_index + info.filename_length;
@@ -194,7 +189,7 @@ impl Metadata {
 
 			children.push(match info.kind {
 				InfoKind::File => Node::File(filename, info.file_offset, info.file_real_size),
-				InfoKind::Directory => Metadata::build_directory(filename, index, records, infos, names),
+				InfoKind::Directory => Self::build_directory(filename, index, records, infos, names),
 			});
 		}
 

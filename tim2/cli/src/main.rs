@@ -1,11 +1,9 @@
 use image::ColorType;
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::result;
-use tim2::{Image, Pixel};
-
-const COLOR_KEY: Pixel = Pixel::from(0, 255, 0, 255);
+use tim2::{Frame, Pixel};
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -27,26 +25,45 @@ impl From<tim2::Error> for Error {
 	}
 }
 
-pub fn write_png(img: &Image) -> Result<()> {
-	let frame = img.get_frame(0);
+pub fn write_png(path: &Path, frame: &Frame) -> Result<()> {
+	let color_key = Some(Pixel::from(0, 255, 0, 255));
 
-	if !frame.has_mipmaps() {
+	if frame.header().has_mipmaps() {
+		println!("MIPMAPS: {:?}", &path);
+	}
+
+	if !frame.header().has_mipmaps() {
 		let width = frame.header().width() as u32;
 		let height = frame.header().height() as u32;
-		let raw_pixels = frame.to_raw(Some(COLOR_KEY));
-		let path = replace_ext(&path, "png")?;
+		let raw_pixels = frame.to_raw(color_key);
+		let mut output_path = PathBuf::from(&path);
 
-		image::save_buffer(path, &raw_pixels, width, height, ColorType::Rgba8).unwrap();
+		output_path.set_extension("png");
+		image::save_buffer(output_path, &raw_pixels, width, height, ColorType::Rgba8).unwrap();
 	}
+
+	Ok(())
 }
 
 fn process_entry(path: &Path) -> Result<()> {
+	println!("Processing: {:?}", &path);
+
 	let img = tim2::load(path)?;
-	let frame_headers = 
 
-	println!("{:?} v{} frames:", path, img.frames().len());
+	if img.frames().len() > 1 {
+		let stem = path.file_stem().unwrap().to_str().unwrap();
+		let ext = path.extension().unwrap().to_str().unwrap();
+		let mut path = PathBuf::from(path);
 
-	write_png(&img)?;
+		img.frames().iter().enumerate().for_each(|(i, frame)| {
+			let filename = format!("{}_{}.{}", stem, i, ext);
+
+			path.set_file_name(filename);
+			write_png(&path, &frame).unwrap();
+		})
+	} else {
+		write_png(&path, &img.get_frame(0))?;
+	}
 
 	Ok(())
 }
@@ -55,7 +72,11 @@ fn main() {
 	fs::read_dir("../assets")
 		.unwrap()
 		.filter_map(|entry| entry.ok())
+		.filter(|entry| entry.path().extension().unwrap() == "tm2")
 		.for_each(|entry| {
-			process_entry(entry.path()).unwrap();
+			match process_entry(&entry.path()) {
+				Ok(_) => {},
+				Err(err) => println!("{:#?}", err),
+			};
 		});
 }
