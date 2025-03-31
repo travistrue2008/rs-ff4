@@ -1,3 +1,5 @@
 {
-  "rust-analyzer.showUnlinkedFileNotification": false
+  "editor.insertSpaces": false,
+  "editor.tabSize": 4,
+  "rust-analyzer.showUnlinkedFileNotification": false,
 }
