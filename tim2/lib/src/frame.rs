@@ -1,5 +1,5 @@
 use crate::common::*;
-use crate::error::Error;
+use crate::error::{Error, Result};
 use crate::pixel::{Format, Pixel};
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -27,11 +27,11 @@ impl DataKind {
 #[derive(Debug)]
 pub struct Header {
 	total_size: u32,
-	palette_size: u32,
+	clut_size: u32,
 	image_size: u32,
 	header_size: u16,
-	color_entry_count: u16,
-	paletted: u8,
+	clut_color_count: u16,
+	picture_format: u8,
 	mipmap_count: u8,
 	clut_format: u8,
 	bpp: u8,
@@ -39,29 +39,29 @@ pub struct Header {
 	height: u16,
 	gs_regs: u32,
 	gs_tex_clut: u32,
-	gs_tex_0: [u8;8],
-	gs_tex_1: [u8;8],
+	gs_tex_0: u64,
+	gs_tex_1: u64,
 	user_data: Vec<u8>,
 }
 
 impl Header {
-	pub fn read(buffer: &[u8], offset: &mut usize) -> Result<Header, Error> {
+	fn read(buffer: &[u8], offset: &mut usize) -> Result<Header> {
 		let mut load_part = |size| { get_slice(&buffer, offset, size) };
-	
+
 		let mut result = Header {
 			total_size: LittleEndian::read_u32(load_part(4)),
-			palette_size: LittleEndian::read_u32(load_part(4)),
+			clut_size: LittleEndian::read_u32(load_part(4)),
 			image_size: LittleEndian::read_u32(load_part(4)),
 			header_size: LittleEndian::read_u16(load_part(2)),
-			color_entry_count: LittleEndian::read_u16(load_part(2)),
-			paletted: load_part(1)[0],
+			clut_color_count: LittleEndian::read_u16(load_part(2)),
+			picture_format: load_part(1)[0],
 			mipmap_count: load_part(1)[0],
 			clut_format: load_part(1)[0],
-			bpp: Header::find_bpp(load_part(1)[0])?,
+			bpp: Self::find_bpp(load_part(1)[0])?,
 			width: LittleEndian::read_u16(load_part(2)),
 			height: LittleEndian::read_u16(load_part(2)),
-			gs_tex_0: clone_into_array(load_part(8)),
-			gs_tex_1: clone_into_array(load_part(8)),
+			gs_tex_0: LittleEndian::read_u64(load_part(8)),
+			gs_tex_1: LittleEndian::read_u64(load_part(8)),
 			gs_regs: LittleEndian::read_u32(load_part(4)),
 			gs_tex_clut: LittleEndian::read_u32(load_part(4)),
 			user_data: Vec::new(),
@@ -72,14 +72,14 @@ impl Header {
 			result.user_data = load_part(user_data_size).to_vec();
 		}
 
-		if result.palette_size > 0 && result.bpp > 8 {
+		if result.is_paletted() && result.bpp > 8 {
 			Err(Error::TrueColorAndPaletteFound)
 		} else {
 			Ok(result)
 		}
 	}
 
-	fn find_bpp(v: u8) -> Result<u8, Error> {
+	fn find_bpp(v: u8) -> Result<u8> {
 		match v {
 			1 => Ok(16),
 			2 => Ok(24),
@@ -94,6 +94,10 @@ impl Header {
 		self.mipmap_count > 1
 	}
 
+	pub fn is_paletted(&self) -> bool {
+		self.clut_size > 0
+	}
+
 	pub fn is_linear_palette(&self) -> bool {
 		self.clut_format & 0x80 != 0
 	}
@@ -106,10 +110,10 @@ impl Header {
 		}
 	}
 
-	pub fn pixel_format(&self) -> Result<Format, Error> {
+	pub fn pixel_format(&self) -> Result<Format> {
 		match self.bpp {
-			4 => Ok(Format::Indexed),
-			8 => Ok(Format::Indexed),
+			4 => Ok(Format::Indexed4),
+			8 => Ok(Format::Indexed8),
 			16 => Ok(Format::Abgr1555),
 			24 => Ok(Format::Rgb888),
 			32 => Ok(Format::Rgba8888),
@@ -121,8 +125,8 @@ impl Header {
 		self.total_size
 	}
 
-	pub fn palette_size(&self) -> u32 {
-		self.palette_size
+	pub fn clut_size(&self) -> u32 {
+		self.clut_size
 	}
 
 	pub fn image_size(&self) -> u32 {
@@ -133,12 +137,12 @@ impl Header {
 		self.header_size
 	}
 
-	pub fn color_entry_count(&self) -> u16 {
-		self.color_entry_count
+	pub fn clut_color_count(&self) -> u16 {
+		self.clut_color_count
 	}
 
-	pub fn paletted(&self) -> u8 {
-		self.paletted
+	pub fn picture_format(&self) -> u8 {
+		self.picture_format
 	}
 
 	pub fn mipmap_count(&self) -> u8 {
@@ -169,11 +173,11 @@ impl Header {
 		self.gs_tex_clut
 	}
 
-	pub fn gs_tex_0(&self) -> [u8;8] {
+	pub fn gs_tex_0(&self) -> u64 {
 		self.gs_tex_0
 	}
 
-	pub fn gs_tex_1(&self) -> [u8;8] {
+	pub fn gs_tex_1(&self) -> u64 {
 		self.gs_tex_1
 	}
 
@@ -190,15 +194,22 @@ pub struct Frame {
 }
 
 impl Frame {
-	pub fn read(buffer: &[u8], offset: &mut usize) -> Result<Frame, Error> {
+	pub fn read(buffer: &[u8], offset: &mut usize) -> Result<Frame> {
 		let header = Header::read(buffer, offset)?;
+
+		println!("{:#?}", &header);
+
 		let data = Frame::read_data(buffer, offset, &header)?;
 		let palettes= Frame::read_palettes(buffer, offset, &header)?;
 
-		Ok(Frame { header, data, palettes })
+		Ok(Frame {
+			header,
+			data,
+			palettes,
+		})
 	}
 
-	fn read_data(buffer: &[u8], offset: &mut usize, header: &Header) -> Result<DataKind, Error> {
+	fn read_data(buffer: &[u8], offset: &mut usize, header: &Header) -> Result<DataKind> {
 		let pixel_size = header.bpp as usize / 8;
 		let size = header.image_size as usize;
 		let slice = get_slice(buffer, offset, size);
@@ -215,7 +226,7 @@ impl Frame {
 			slice.to_vec()
 		};
 
-		if header.palette_size > 0 {
+		if header.clut_size > 0 {
 			let raw = Frame::unswizzle(&data.to_vec(), header);
 
 			Ok(DataKind::Indices(raw))
@@ -227,10 +238,14 @@ impl Frame {
 		}
 	}
 
-	fn read_palettes(buffer: &[u8], offset: &mut usize, header: &Header) -> Result<Vec<PixelBuffer>, Error> {
-		let total_size = header.palette_size as usize;
+	fn read_palettes(buffer: &[u8], offset: &mut usize, header: &Header) -> Result<Vec<PixelBuffer>> {
+		if header.clut_size == 0 {
+			return Ok(Vec::new());
+		}
+
+		let total_size = header.clut_size as usize;
 		let slice = get_slice(buffer, offset, total_size);
-		let size = (header.color_entry_count * header.color_size() as u16) as usize;
+		let size = (header.clut_color_count * header.color_size() as u16) as usize;
 		let count = total_size / size;
 		let color_size = header.color_size() as usize;
 		let mut result = Vec::with_capacity(count);
@@ -251,7 +266,7 @@ impl Frame {
 		Ok(result)
 	}
 
-	fn read_colors(buffer: &[u8], color_size: usize) -> Result<PixelBuffer, Error> {
+	fn read_colors(buffer: &[u8], color_size: usize) -> Result<PixelBuffer> {
 		let mut offset = 0usize;
 		let mut result = Vec::new();
 
@@ -303,15 +318,17 @@ impl Frame {
 						if tile_x < width && tile_y < height {
 							let index = tile_y * width + tile_x;
 
-							result[index] = buffer[i];
+							if let Some(value) = buffer.get(i) {
+								result[index] = *value;
+							}
 						}
-	
+
 						i += 1;
 					}
 				}
 			}
 		}
-	
+
 		result
 	}
 
@@ -324,10 +341,9 @@ impl Frame {
 	}
 
 	pub fn get_pixels(&self) -> PixelBuffer {
-		let palette = &self.palettes[0];
-
 		match &self.data {
 			DataKind::Indices(v) => {
+				let palette = &self.palettes[0];
 				let mut result = Vec::with_capacity(v.len());
 
 				for index in v {

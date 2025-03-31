@@ -4,7 +4,8 @@ use std::fmt;
 
 #[derive(Copy, Clone)]
 pub enum Format {
-	Indexed,
+	Indexed4,
+	Indexed8,
 	Abgr1555,
 	Rgb888,
 	Rgba8888,
@@ -29,6 +30,7 @@ impl Pixel {
 
 	pub fn from_buf(buf: &[u8]) -> Result<Pixel, Error> {
 		match buf.len() {
+			// 16-bit: RGBA5551
 			2 => {
 				let raw = ((buf[0] as u16) << 8) | buf[1] as u16;
 
@@ -39,19 +41,23 @@ impl Pixel {
 					a: if raw >> 15 == 1 { 255 } else { 0 },
 				})
 			},
+
+			// 24-bit: RGB8
 			3 => Ok(Pixel {
 				r: buf[0],
 				g: buf[1],
 				b: buf[2],
 				a: 255,
 			}),
+
+			// 32-bit: RGBA8
 			4 => Ok(Pixel {
 				r: buf[0],
 				g: buf[1],
 				b: buf[2],
 				a: buf[3],
 			}),
-			n => Err(Error::InvalidRange(n)),
+			n => Err(Error::InvalidPixelSize(n)),
 		}
 	}
 
