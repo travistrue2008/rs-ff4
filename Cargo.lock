@@ -2388,6 +2388,7 @@ dependencies = [
  "clap",
  "image 0.23.14",
  "rust-crypto",
+ "tim2",
 ]
 
 [[package]]
