@@ -91,8 +91,6 @@ fn build_tile_map(name: &str, directories: &Vec<PathBuf>) -> Result<HashMap<Stri
                 let width = frame.header().width() as usize;
                 let height = frame.header().height() as usize;
                 let raw = frame.to_raw(Some(color_key));
-                let width = frame.header().width() as usize;
-                let height = frame.header().height() as usize;
 
                 for y in 0..(height / TILE_SIZE) {
                     for x in 0..(width / TILE_SIZE) {
