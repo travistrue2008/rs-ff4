@@ -19,7 +19,7 @@ type SubSection = [u8; SECTION_SIZE];
 struct Image {
     width: usize,
     height: usize,
-    raw: Vec::<u8>,
+    raw: Vec<u8>,
 }
 
 fn get_sub_section(x_tile: usize, y_tile: usize, width: usize, buffer: &[u8]) -> SubSection {
@@ -49,8 +49,8 @@ fn calc_hash(buffer: &SubSection) -> String {
     hasher.result_str()
 }
 
-fn filter_directories<P: AsRef<Path>>(path: P, items: ReadDir) -> Vec::<PathBuf> {
-    let result: Vec::<PathBuf> = items
+fn filter_directories<P: AsRef<Path>>(path: P, items: ReadDir) -> Vec<PathBuf> {
+    let result: Vec<PathBuf> = items
         .filter_map(|item| item.ok())
         .filter(|item| item.file_type().unwrap().is_dir())
         .map(|item| item.file_name().into_string().unwrap())
@@ -63,7 +63,7 @@ fn filter_directories<P: AsRef<Path>>(path: P, items: ReadDir) -> Vec::<PathBuf>
     result
 }
 
-fn filter_files<P: AsRef<Path>>(path: P, name: &str, items: ReadDir) -> Vec::<PathBuf> {
+fn filter_files<P: AsRef<Path>>(path: P, name: &str, items: ReadDir) -> Vec<PathBuf> {
     let suffix = &format!("_{}.tm2", name);
     let result = items
         .filter_map(|item| item.ok())
@@ -76,7 +76,7 @@ fn filter_files<P: AsRef<Path>>(path: P, name: &str, items: ReadDir) -> Vec::<Pa
     result
 }
 
-fn build_tile_map(name: &str, directories: &Vec::<PathBuf>) -> Result<HashMap<String, SubSection>> {
+fn build_tile_map(name: &str, directories: &Vec<PathBuf>) -> Result<HashMap<String, SubSection>> {
     let mut tiles = HashMap::new();
     let color_key = Pixel::from(0, 255, 0, 255);
 
@@ -88,11 +88,13 @@ fn build_tile_map(name: &str, directories: &Vec::<PathBuf>) -> Result<HashMap<St
             let image = tim2::load(file_path)?;
 
             for frame in image.frames() {
+                let width = frame.header().width() as usize;
+                let height = frame.header().height() as usize;
                 let raw = frame.to_raw(Some(color_key));
 
-                for y in 0..(frame.header().height() / TILE_SIZE) {
-                    for x in 0..(frame.header().width() / TILE_SIZE) {
-                        let section_buffer = get_sub_section(x, y, frame.header().width(), &raw);
+                for y in 0..(height / TILE_SIZE) {
+                    for x in 0..(width / TILE_SIZE) {
+                        let section_buffer = get_sub_section(x, y, width, &raw);
                         let hash = calc_hash(&section_buffer);
 
                         if !tiles.contains_key(&hash) {
