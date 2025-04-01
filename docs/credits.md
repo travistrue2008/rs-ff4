@@ -19,3 +19,7 @@ I used this editor by Marco Calautti to load TIM2 files as a means of visually d
 ### [FF4 Tools](https://github.com/marco-calautti/FF4Tools)
 
 This is another repo by Marco Calautti which also does a lot of the same scraping that this Rust project does. I think I found it in 2023, and started to use it as a reference to see if my code was giving similar outputs.
+
+### [FF6Tools](https://github.com/everything8215/ff6tools)
+
+This repo was one of the resources that I looked through to get a better understanding of Square Enix's implementation of lzss compression. It's been 5 years since I worked on my implementation, but I believe it was this repo, and some sort of tool in for FF7, that seemed to help me figure out the correct sliding window parameters for this particular game's use of lzss compression.
