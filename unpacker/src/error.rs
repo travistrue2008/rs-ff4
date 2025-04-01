@@ -10,6 +10,7 @@ pub enum Error {
 	InvalidNodeKind,
 	InvalidFileNum(usize, usize),
 	InvalidDecodeLength(usize, usize),
+	NotADirectory(String),
 	Io(io::Error),
 	Image(image::ImageError),
 	Iso9660(iso9660::ISOError),
