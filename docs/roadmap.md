@@ -1,6 +1,25 @@
-- Integrate the source to `tim2` as a local project of this workspace
-- Write a font loader for the text provided by the ISO
+- Decrypt EBOOT.BIN
+  - Port `libkirk` from C to Rust
+  - Port `pspdecrypt` from C to Rust
 
-- Major goals:
-  - Write a `scraper` crate that scrapes assets from the original PSP ISO, and write assets in more common formats such as `.png` for images and `.json` for data
-  - Write an installer that will take the scraped assets, and convert them into assets that the rebuilt game can use
+- Scrape
+  - Executable Data
+    - Party initial stats
+    - Party leveling stats
+    - Enemy stats
+    - Enemy battle formations
+    - Equipment stats
+    - Item stats
+    - Scripts (cutscenes, battle, etc)
+  - Assets
+    - Images
+    - Sounds
+    - Music
+    - Movies
+    - Tilesets
+    - Tilemaps
+
+- Bugs
+  - Correctly extract filenames with unicode
+  - Correctly extract messages files
+  - Correctly load all TIM2 files
